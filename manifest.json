@@ -1,0 +1,124 @@
+{
+  "id": "/",
+  "name": "BRVTY — Book Intelligence",
+  "short_name": "BRVTY",
+  "description": "AI-powered book summaries with chapter audio, deep narration, cover art, and an audiobook shelf. Generate structured intelligence from any book in seconds. Listen on your commute.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait-primary",
+  "background_color": "#0d0e12",
+  "theme_color": "#3d8ef0",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": [
+    "books",
+    "education",
+    "productivity",
+    "entertainment"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "shot-summary.png",
+      "sizes": "1080x2110",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Structured book summary with thesis and key pillars"
+    },
+    {
+      "src": "shot-audio.png",
+      "sizes": "1080x2400",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Audio player with Quick, Chapters and Deep Dive modes"
+    },
+    {
+      "src": "shot-library.png",
+      "sizes": "1080x2400",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Library with cover art and audio status"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Generate Summary",
+      "short_name": "Generate",
+      "description": "Generate a new book summary",
+      "url": "/?tab=generate",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "My Library",
+      "short_name": "Library",
+      "description": "Browse your book library",
+      "url": "/?tab=library",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Audiobooks",
+      "short_name": "Audiobooks",
+      "description": "Open your audiobook shelf",
+      "url": "/?tab=audiobooks",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "launch_handler": {
+    "client_mode": [
+      "navigate-existing",
+      "auto"
+    ]
+  }
+}

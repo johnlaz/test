@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d0e12">
+<title>BRVTY — Offline</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0d0e12;color:#dde2e8;font-family:'DM Mono',monospace,system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;}
+.card{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:300px;}
+.icon{font-size:56px;}
+h1{font-family:system-ui,sans-serif;font-size:28px;font-weight:300;letter-spacing:6px;color:#3d8ef0;}
+p{font-size:11px;color:#4a5058;line-height:1.8;letter-spacing:1px;}
+.hint{font-size:10px;color:#2a3040;margin-top:8px;}
+button{background:#3d8ef0;border:none;border-radius:4px;color:#fff;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:12px 24px;cursor:pointer;margin-top:8px;}
+button:hover{background:#6aaeff;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">📡</div>
+  <h1>BRV<span style="border-bottom:2px solid #3d8ef0;padding-bottom:2px;display:inline-block;line-height:1;">T<span style="letter-spacing:0">Y</span></span></h1>
+  <p>You're offline. Your library and any downloaded audio are still available.</p>
+  <p class="hint">Gemini features require an internet connection.</p>
+  <button onclick="location.reload()">Try Again</button>
+</div>
+</body>
+</html>
