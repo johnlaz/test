@@ -1,85 +1,71 @@
-<p align="center"><img src="docs/banner.svg" alt="BRVTY, Book Intelligence" width="100%"></p>
+# Market Stretch Terminal
 
-# BRVTY — Book Intelligence
+End-of-day overbought / oversold monitor for the Nasdaq-100 (QQQM), S&P 500 (SPY) and Dow (DIA).
+One check after the close, one plain reading per index. No account, no API key. Not live: a GitHub Action rebuilds the data after each US close.
 
-Turn any book into a structured summary and a commute-ready audio experience. BRVTY is a single-file PWA by [LAZLAB Creations](https://brvty.net). It runs on your own free Google Gemini key, keeps everything on your device, and needs no account.
+**Live:** https://johnlaz.github.io/mst/ (landing) · https://johnlaz.github.io/mst/app/ (app, installable as a PWA)
 
-## Live URLs
+![Data flow: Yahoo Finance and Wikipedia feed a GitHub Action, which writes data/market.json for the app](docs/data-flow.svg)
 
-| | |
-|---|---|
-| App | https://app.brvty.net |
-| Landing page | https://brvty.net (separate repo: `brvty-landing`) |
-
-## How it works
-
-<img src="docs/how-it-works.svg" alt="Enter a title, read the brief, make the audio, listen anywhere" width="100%">
-
-## What you get
-
-- **Book summaries:** thesis, 4 key pillars, deep dive, action items and quotes, with cover art.
-- **Chapter audio:** one track per section, with auto-advance and steering-wheel controls.
-- **Quick and Deep Dive audio:** a 3–4 minute brief, or a long audiobook-style narration.
-- **Document mode:** paste an article, report or notes and summarize it or read it aloud.
-- **Audiobook shelf:** import your own MP3, M4A, WAV or FLAC files into the same player.
-- **Smart library:** search, sort and filter; notes and bookmarks per book.
-- **Car Mode and sleep timer** for the drive.
-- **Vault:** export and import your whole library as one `.folio` file.
-
-## First run
-
-1. Open the app and follow the **Start here** card on the Generate screen (or the intro).
-2. Create a key in [Google AI Studio](https://aistudio.google.com/apikey), paste it, and tap **Save & test key**.
-3. Enter a book title and tap Generate.
-
-## AI and model setup
-
-BRVTY uses Google Gemini only.
-
-- Defaults: `gemini-3.7-flash` for summaries and `gemini-3.1-flash-tts-preview` for audio (voices Aoede, Orus, Charon, Kore).
-- Saving your key fetches the models your key can use. **Settings → Models → Refresh model list** repeats that any time.
-- Defaults and your saved choices are never changed automatically. If a chosen model disappears from Google's list, it stays selected and is flagged "(not in current list)".
-
-## Data and privacy
-
-Your key, library, audio and notes live in your browser storage (localStorage and IndexedDB). Nothing is sent anywhere except direct calls to Google's Gemini API and cover lookups (Open Library, iTunes). Export a vault backup regularly: clearing browser data deletes the library.
+## What it does
+- Shows whether each index is stretched down (oversold) or up (overbought), in plain words.
+- Reads the Ultimate Oscillator, RSI, breadth (share of stocks above their 50 and 200-day averages), VIX, distance from the peak and moving averages, new highs/lows and volume.
+- Three sensitivity levels (pullback ~8%, correction ~13%, bear market ~25% drop) instead of detailed criteria.
+- Works offline with the last data it saw, and installs to a phone or desktop home screen.
+- Screening aid only, not investment advice.
 
 ## Repo layout
-
 ```
-index.html        the whole app (HTML, CSS, JS)
-manifest.json     PWA manifest (scope "/")
-sw.js             service worker, versioned from index.html
-offline.html      shown when offline and nothing is cached
-icon-192.png  icon-512.png  icon-180.png
-shot-*.png        install-dialog screenshots
-brvty-library.folio   library backup loaded by the logo shortcut (see below)
-icon-maskable-512.png padded icon for Android adaptive masks
-docs/             README visuals
+/
+├── index.html              landing page (no manifest, no service worker)
+├── README.md
+├── docs/
+│   └── data-flow.svg       README visual
+├── app/
+│   ├── index.html          the whole app
+│   ├── manifest.json
+│   ├── sw.js               service worker (version must match the stamp in app/index.html)
+│   ├── icon-192.png
+│   ├── icon-512.png
+│   └── apple-touch-icon.png
+├── data/
+│   └── market.json         built by the Action; do not edit by hand
+├── scripts/
+│   ├── update_data.py
+│   └── requirements.txt
+└── .github/workflows/
+    └── update-data.yml     weekdays 22:30 UTC, after the US close
 ```
+`data/` stays at the repo root. The app loads `data/market.json` and falls back to `../data/market.json`, which is where the Action writes it.
 
-## Loading your library backup
+## AI / model setup
+None. The app does not use an AI provider.
 
-Tap the BRVTY logo 5 times quickly and the app loads `brvty-library.folio` from the site and merges it into your library (books already present are skipped).
+## Data & privacy
+- Prices come from Yahoo Finance (via `yfinance`) and index constituents from Wikipedia. Both are unofficial sources and can change without notice.
+- Settings and any manual entries are kept in your browser's local storage. Nothing is sent to a server of ours.
+- An optional free FMP key, if you paste one into the app's Menu, is stored in your browser only and is never included in exports.
 
-The file in this repo is your library backup (14 books, exported 2026-05-09). To refresh it with a newer library: in the app go to **Settings → Library Vault → Export Vault**, save the `.folio` file here as `brvty-library.folio` (replacing the old one), then deploy. It is about 24 MB, so it loads slowly on mobile data, and the service worker never caches it.
+## Deploy / update
+1. Settings → Pages → Source: Deploy from a branch → `main` / `/ (root)`.
+2. Actions → "Update market data" → **Run workflow** (first run takes a few minutes and commits `data/market.json`).
+3. If the run fails at the commit step: Settings → Actions → General → Workflow permissions → **Read and write permissions**.
+4. To release an app change: edit `app/`, bump `VERSION` in `app/sw.js` **and** the version stamp in `app/index.html`, then push to `main`. Installed copies update on the next open.
 
-## Deploy and update
+Optional: repo secret `FMP_API_KEY`, used only as a last-resort backup source for the three index ETFs if Yahoo and Stooq both fail.
 
-Hosted on GitHub Pages at app.brvty.net, served from the repo root. To ship a change:
+Base cases: the thresholds live in `PRESETS` near the top of the script in `app/index.html`. The "what followed past signals" table uses `PRESET_RULES` in `scripts/update_data.py`; keep the two in step.
 
-1. Edit `index.html`.
-2. Bump `APP_VERSION` in `index.html`. That one value drives the version shown in the app, the title and the service-worker cache name (`brvty-v<version>`).
-3. Commit and push. Installed copies show an **update ready** banner on next open.
-
-Moving files or changing `scope` can break existing installs, so keep the app at the repo root.
+## If something looks wrong
+- Header says data is N days old: the Action failed or Yahoo blocked it that day. Check the Actions log and re-run.
+- Site not updating after a successful run: confirm Pages is deploying from the branch the Action commits to.
+- App looks stale after a release: reload once; the new service worker takes over on the next load.
+- If Wikipedia's tables change, the script reuses the previous constituent list.
+- Nasdaq-100 top-10 weight is approximate (market-cap share). S&P 500 weights are not computed.
+- Without `data/market.json` the app falls back to manual entry (Update data menu).
 
 ## Changelog
-
-- **6.3:** new black-and-silver icon; wordmark underlines only "TY" to match it; library backup restored.
-- **6.2:** service worker now registers at the real root path (offline works); network-first pages with an update banner; first-run key card with key testing; model picker with refresh; square maskable icons and valid screenshots; contrast, zoom and label fixes; library file loader fixed with a placeholder; single `APP_VERSION`.
-- **6.1:** Gemini model update, cover-scan, library vault.
+- **1.0.0**: landing page at the repo root, app moved to `/app`, installable PWA (manifest, service worker, icons), version stamp, new README.
 
 ---
-
 © 2026 LAZLAB Creations. All Rights Reserved. · lazlab.io@gmail.com

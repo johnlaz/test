@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Stretch Terminal</title>
+<meta name="theme-color" content="#06090e">
+<meta name="description" content="End-of-day overbought / oversold monitor for the Nasdaq-100, S&amp;P 500 and Dow.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MST">
+<style>
+:root{
+  --bg:#06090e; --panel:#0e131f; --line:#1b2536; --line2:#2a3850;
+  --txt:#e8edf5; --mut:#8b9ab0; --dim:#5b6a82;
+  --os:#34d399; --os-bg:rgba(52,211,153,.14); --ob:#fb7185; --ob-bg:rgba(251,113,133,.14);
+  --warn:#fbbf24; --acc:#818cf8; --acc-bg:rgba(129,140,248,.14);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#090d16}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.wrap{max-width:1280px;margin:0 auto;padding:16px}
+header.top{position:sticky;top:0;z-index:30;background:rgba(11,15,23,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding-top:12px;padding-bottom:12px}
+h1{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{font-size:12px;color:var(--mut);margin-top:3px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{background:#111827;border:1px solid var(--line2);border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;font-weight:600;color:#cbd5e1}
+.btn:hover{background:#18233a}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#0b1020}
+.btn.sm{padding:4px 8px;font-size:11px}
+.btn.ghost{background:transparent}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;border:1px solid;letter-spacing:.02em;white-space:nowrap}
+.pill.os{color:var(--os);background:var(--os-bg);border-color:rgba(52,211,153,.4)}
+.pill.ob{color:var(--ob);background:var(--ob-bg);border-color:rgba(251,113,133,.4)}
+.pill.n{color:#cbd5e1;background:rgba(148,163,184,.1);border-color:rgba(148,163,184,.3)}
+.pill.wos{color:var(--os);background:transparent;border-color:rgba(52,211,153,.5)}
+.pill.wob{color:var(--ob);background:transparent;border-color:rgba(251,113,133,.5)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.banner{margin:14px 0 0;padding:9px 12px;border-radius:10px;font-size:12px;border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);color:#fcd34d;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h2{font-size:14px;margin:0;font-weight:700}
+.card .hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
+.hint{font-size:11px;color:var(--mut);margin-top:2px}
+.grid{display:grid;gap:14px}
+.strip{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:14px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(168px,1fr));margin-top:14px}
+.g2{grid-template-columns:7fr 5fr;margin-top:14px;align-items:stretch}
+@media(min-width:961px){.g2>section.card:first-child{display:flex;flex-direction:column}.g2>section.card:first-child .chartbox{flex:1;height:auto;min-height:260px}}
+.col{display:grid;gap:14px;align-content:start;min-width:0}
+.ir{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:12px;align-items:start}
+.ir:last-child{border-bottom:0;padding-bottom:0}
+.ir .k{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.ir .v{color:#e8edf5;line-height:1.45}
+.ir .v b{font-weight:700}
+.ir .s{color:var(--mut);font-size:11px;margin-top:2px;line-height:1.45}
+.g3{grid-template-columns:1fr 1fr;margin-top:14px;align-items:start}
+.g4{grid-template-columns:5fr 7fr;margin-top:14px}
+@media(max-width:960px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.lbl{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.big{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:8px}
+.note{font-size:11px;color:var(--mut);margin-top:4px}
+.c-os{color:var(--os)}.c-ob{color:var(--ob)}.c-warn{color:var(--warn)}.c-mut{color:var(--mut)}
+.tile{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;color:inherit}
+.tile:hover{border-color:var(--line2)}
+.tile.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc) inset}
+.gauge{position:relative;height:8px;border-radius:99px;background:#1a2336;margin-top:12px}
+.gauge .z{position:absolute;top:0;bottom:0}
+.gauge .z.os{left:0;background:rgba(52,211,153,.35);border-radius:99px 0 0 99px}
+.gauge .z.ob{background:rgba(251,113,133,.35);border-radius:0 99px 99px 0}
+.gauge .mid{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:#3a4a66}
+.gauge .mk{position:absolute;top:-4px;width:4px;height:16px;margin-left:-2px;border-radius:2px;background:#fff;box-shadow:0 0 0 2px var(--panel)}
+.gl{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:6px}
+.intro{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;font-size:12px;line-height:1.5;color:var(--mut);background:#0a0f19;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:14px}
+.intro b{color:#cbd5e1}
+.hero{display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.hero .st{font-size:22px;font-weight:800;letter-spacing:-.01em}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.cols{grid-template-columns:1fr}}
+.cf h3{margin:0 0 8px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+.cf li{list-style:none;display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.cf ul{margin:0;padding:0}
+.chk{font-weight:800;width:16px;display:inline-block}
+.pips{display:flex;gap:3px}.pips i{width:14px;height:6px;border-radius:3px;background:#1d283d}
+.pips.os i.on{background:var(--os)}.pips.ob i.on{background:var(--ob)}
+.tabs{display:flex;gap:4px;background:#0a0f19;border:1px solid var(--line);border-radius:8px;padding:3px}
+.tabs button{background:none;border:0;border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;color:var(--mut);cursor:pointer}
+.tabs button.on{background:#1b2740;color:#fff}
+#presetTabs button{display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.2;padding:6px 14px}
+#presetTabs button small{font-size:10px;font-weight:500;opacity:.75}
+.more{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px dashed var(--line);padding:10px 0 2px;margin-top:4px;font-size:12px;font-weight:600;color:var(--acc);cursor:pointer}
+.more:hover{text-decoration:underline}
+details.scr>summary.scrsum{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px}
+details.scr>summary .tag{margin-left:auto;font-size:11px;font-weight:600;color:var(--acc);border:1px solid rgba(129,140,248,.4);background:var(--acc-bg);border-radius:99px;padding:3px 10px}
+details.scr[open]>summary .tag{display:none}
+details.help{margin-top:12px;font-size:12px;color:var(--mut)}
+details.help summary{cursor:pointer;color:var(--acc);font-weight:600}
+details.help ul{margin:8px 0 0;padding-left:18px;line-height:1.55}
+.chartbox{position:relative;height:260px}
+.chartbox canvas{width:100%;height:100%;display:block}
+#tip{position:absolute;pointer-events:none;background:#0a0f19ee;border:1px solid var(--line2);border-radius:8px;padding:6px 8px;font-size:11px;display:none;white-space:nowrap}
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px;text-align:center;padding:20px}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);text-align:left;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th.s{cursor:pointer}th.s:hover{color:#fff}
+td{padding:8px;border-bottom:1px solid rgba(27,37,54,.7);font-size:12px}
+tr:hover td{background:rgba(255,255,255,.015)}
+tr.reached td{color:var(--mut)}
+tr.next td{background:var(--acc-bg)}
+.lad td:first-child{font-weight:700}
+.custout{font-size:13px;line-height:1.5;color:#e8edf5;background:var(--acc-bg);border:1px solid rgba(129,140,248,.35);border-radius:9px;padding:9px 12px;margin:0 0 12px}
+tr.mine td{background:rgba(129,140,248,.18)}
+input[type=text],input[type=password],input[type=number],input[type=date],select,textarea{background:#0a0f19;border:1px solid var(--line2);border-radius:7px;padding:6px 8px;width:100%;outline:none}
+input:focus,textarea:focus{border-color:var(--acc)}
+textarea{resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+.chip{background:#0a0f19;border:1px solid var(--line2);border-radius:99px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--mut);cursor:pointer}
+.chip.on{background:#1b2740;color:#fff;border-color:#34456a}
+.mini{display:inline-block;position:relative;width:64px;height:6px;border-radius:9px;vertical-align:middle;margin-left:8px}
+.mini i{position:absolute;top:-3px;width:3px;height:12px;background:#fff;border-radius:2px;margin-left:-1px}
+.x{background:none;border:0;color:var(--dim);cursor:pointer;font-size:14px}.x:hover{color:var(--ob)}
+.log{max-height:170px;overflow:auto;font-size:12px}
+.log div{display:flex;gap:10px;padding:6px 8px;border:1px solid rgba(27,37,54,.8);background:#0a0f19;border-radius:7px;margin-bottom:6px}
+.log .t{color:var(--dim);flex:none}.log .g{flex:none;font-weight:700}
+#veil{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:40}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(600px,100%);background:#0b101a;border-left:1px solid var(--line2);z-index:50;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column}
+#drawer.open{transform:none}
+#drawer .dh{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+#drawer .db{flex:1;overflow:auto;padding:16px}
+#drawer .df{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+#drawer.auto .manual, #drawer.auto .df{display:none}
+#drawer:not(.auto) .autoinfo{display:none}
+fieldset{border:1px solid var(--line);border-radius:10px;margin:0 0 14px;padding:12px}
+legend{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--acc);padding:0 6px;font-weight:700}
+.f{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.f label{font-size:11px;color:var(--mut);display:block}
+.f label input{margin-top:4px}
+@media(max-width:520px){.f{grid-template-columns:1fr 1fr}}
+.hb{padding:12px;border:1px solid var(--line);background:#0a0f19;border-radius:10px;margin-bottom:10px}
+.hb.hbase{background:transparent;border-style:dashed}
+.hbt{font-size:13px;display:flex;align-items:center;flex-wrap:wrap;gap:2px}
+.hbs{font-size:11px;color:var(--mut);margin:3px 0 10px}
+.hcells{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.hh{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600;margin-bottom:4px}
+.hv{font-size:17px;font-weight:700}
+.hs{font-size:11px;color:#cbd5e1;margin-top:2px;line-height:1.35}
+.hw{font-size:10px;color:var(--dim);margin-top:2px}
+.msg{font-size:11px;margin-top:6px;color:var(--mut)}
+.fmpstat{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fmpstat.on{padding:8px 10px;border:1px solid rgba(52,211,153,.35);background:var(--os-bg);border-radius:9px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#1b2740;border:1px solid #34456a;padding:9px 14px;border-radius:9px;font-size:12px;display:none;z-index:60}
+.read{margin-top:14px;padding:12px 14px;background:#0a0f19;border:1px solid var(--line);border-radius:10px;font-size:13px;line-height:1.65;color:#cbd5e1}
+.read b{color:#fff}
+.xr{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12px}
+.xr b{color:#fff;min-width:54px}.xr .nm{flex:1;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+details.scr summary{cursor:pointer;list-style:none;font-size:14px}
+details.scr summary::-webkit-details-marker{display:none}
+details.scr summary::before{content:"▸ ";color:var(--acc)}
+details.scr[open] summary::before{content:"▾ "}
+.ht td,.ht th{padding:7px 6px}
+.ht .w{font-size:10px;color:var(--dim)}
+footer{font-size:11px;color:var(--dim);padding:18px 0 30px;text-align:center}
+
+@media(max-width:600px){
+  body{font-size:14px}
+  .wrap{padding:10px}
+  header.top{position:static}
+  header.top .wrap{padding-top:8px;padding-bottom:8px;gap:8px}
+  h1{font-size:16px}
+  .card{padding:12px;border-radius:10px}
+  .grid,.strip,.kpis,.g2,.g3,.g4{gap:10px}
+  .strip{grid-template-columns:1fr 1fr}
+  .tile{padding:10px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpis .card:last-child{grid-column:1/-1}
+  .kpis .card{padding:11px}
+  .kpis .big{font-size:20px}
+  .col{gap:10px}
+  .ir{grid-template-columns:78px 1fr}
+  .big{font-size:22px}
+  .hero{gap:14px}
+  .hero>div{min-width:0 !important;width:100%}
+  .hero .st{font-size:20px}
+  .tabs{width:100%}
+  .tabs button{flex:1;padding:6px 4px}
+  #presetTabs button{padding:6px 4px}
+  #presetDesc{max-width:none !important}
+  .chartbox{height:220px}
+  #q{width:100% !important}
+  .hd{flex-direction:column}
+  .xr{gap:6px}
+  td,th{padding:7px 5px}
+  .btn{padding:8px 12px}
+  .chip{padding:5px 11px}
+  #toast{max-width:92vw}
+  details.scr>summary .tag{margin-left:0}
+}
+@media(max-width:380px){.strip{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <div class="row">
+        <h1>Market Stretch Terminal</h1>
+        <span id="hdrPill" class="pill n"><span class="dot"></span><span id="hdrPillTxt">—</span></span>
+      </div>
+      <div class="sub"><span id="subSym"></span> · <span id="subAge"></span></div>
+    </div>
+    <div class="row">
+      <button class="btn pri" id="mainBtn" onclick="mainAction()">Update data</button>
+      <button class="btn" onclick="openDrawer()">Menu</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="banner"></div>
+
+  <div id="idxStrip" class="grid strip"></div>
+
+  <section class="card" style="margin-top:14px">
+    <div id="intro" class="intro"><span><b>What this shows:</b> whether the market is stretched <span class="c-os">down (oversold: bounces get more likely)</span> or <span class="c-ob">up (overbought: pullbacks get more likely)</span>. It reads where things stand today; it doesn't predict.</span><button class="x" onclick="hideIntro()" title="Hide this" aria-label="Hide this">✕</button></div>
+    <div class="hero">
+      <div style="min-width:240px">
+        <div class="lbl" id="heroLbl">Status</div>
+        <div id="heroSt" class="st" style="margin-top:6px">—</div>
+        <div id="heroSub" class="note" style="font-size:12px"></div>
+      </div>
+      <div>
+        <div class="lbl" style="margin-bottom:6px">How sensitive?</div>
+        <div class="tabs" id="presetTabs"></div>
+        <div class="note" id="presetDesc" style="max-width:300px"></div>
+      </div>
+      <div style="min-width:220px">
+        <div class="row" style="justify-content:space-between;font-size:12px"><span class="c-os">▼ Oversold signals</span><span id="pipOSn" class="mono"></span></div>
+        <div id="pipOS" class="pips os" style="margin:5px 0 10px"></div>
+        <div class="row" style="justify-content:space-between;font-size:12px"><span class="c-ob">▲ Overbought signals</span><span id="pipOBn" class="mono"></span></div>
+        <div id="pipOB" class="pips ob" style="margin-top:5px"></div>
+      </div>
+    </div>
+    <div id="readTxt" class="read"></div>
+    <details class="help"><summary>What do these words mean?</summary>
+      <ul>
+        <li><b>Oversold</b>: price has dropped fast or far. Bounces tend to become more likely, but never guaranteed.</li>
+        <li><b>Overbought</b>: price has climbed fast or far. Pullbacks tend to become more likely, but never guaranteed.</li>
+        <li><b>Leaning</b>: several checks agree, but the main momentum score has not crossed its line yet.</li>
+        <li><b>Momentum score (Ultimate Oscillator, "UO")</b>: a 0–100 gauge of how hard price has been pushed down or up recently. Low = beaten down, high = stretched up. It decides the main status.</li>
+        <li><b>RSI</b>: another 0–100 momentum gauge. Under about 30 = oversold, over about 70 = overbought. Shown in the chart and stock list.</li>
+        <li><b>Breadth</b>: the share of the index's stocks trading above their 50-day average. Low = few stocks participating, high = most are.</li>
+        <li><b>50-day / 200-day average</b>: the average closing price over the last 50 or 200 trading days. The 200-day is the long-term trend line.</li>
+        <li><b>52-week high / pullback</b>: the highest close in the past year, and how far price is below it.</li>
+        <li><b>VIX</b>: the market's fear level, based on how much traders expect stocks to swing. Above about 30 = nervous, below about 15 = calm.</li>
+        <li><b>New highs / lows</b>: the share of stocks at a 52-week high or low today.</li>
+        <li><b>Cap-weight vs equal-weight</b>: the normal index counts big companies more. The equal-weight version counts every stock the same. A gap shows whether a few giants are carrying the index.</li>
+        <li><b>Checks</b>: four tests on each side (oversold and overbought). The more that agree, the stronger the case.</li>
+      </ul>
+    </details>
+  </section>
+
+  <div id="kpis" class="grid kpis"></div>
+
+  <div class="grid g2">
+    <section class="card">
+      <div class="hd">
+        <div><h2>History</h2><div class="hint" id="chartHint"></div></div>
+        <div class="row">
+          <div class="tabs" id="tabsMetric">
+            <button data-v="price" class="on">Price</button><button data-v="uo">Momentum</button><button data-v="rsi">RSI</button><button data-v="b50" id="tabBreadth">Breadth</button>
+          </div>
+          <div class="tabs" id="tabsRange">
+            <button data-v="63">3M</button><button data-v="126" class="on">6M</button><button data-v="252">1Y</button><button data-v="0">All</button>
+          </div>
+        </div>
+      </div>
+      <div class="chartbox"><canvas id="chart"></canvas><div id="tip"></div></div>
+    </section>
+
+    <div class="col">
+    <section class="card cf">
+      <div class="hd"><div><h2>Signal confluence</h2><div class="hint">Four checks each way. When 2 or more agree, the status leans that way</div></div></div>
+      <div class="cols">
+        <div><h3 class="c-os">▼ Oversold <span id="cfOSn" class="mono"></span></h3><ul id="cfOS"></ul></div>
+        <div><h3 class="c-ob">▲ Overbought <span id="cfOBn" class="mono"></span></h3><ul id="cfOB"></ul></div>
+      </div>
+      <div class="note" id="cfNote" style="margin-top:10px"></div>
+    </section>
+    <section class="card" id="intCard">
+      <div class="hd"><div><h2>Market internals</h2><div class="hint">What is under the surface of the index</div></div></div>
+      <div id="intBody"></div>
+    </section>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <section class="card"><div class="hd"><div><h2 class="c-os">▼ Most oversold</h2><div class="hint" id="osHint"></div></div></div><div id="osList"></div></section>
+    <section class="card"><div class="hd"><div><h2 class="c-ob">▲ Most overbought</h2><div class="hint" id="obHint"></div></div></div><div id="obList"></div></section>
+  </div>
+
+  <div class="grid g3">
+    <section class="card"><div class="hd"><div><h2 id="histTitle">What happened after past signals</h2><div class="hint" id="histHint"></div></div></div><div id="histBody"></div></section>
+    <section class="card">
+      <div class="hd"><div><h2>Big names vs the rest</h2><div class="hint" id="relHint"></div></div></div>
+      <div style="background:#0a0f19;border:1px solid var(--line);border-radius:9px;padding:12px">
+        <div class="lbl" id="relLbl">Cap-weight minus equal-weight, 1 month</div>
+        <div id="relVal" class="big mono" style="font-size:24px"></div>
+        <div id="relTxt" class="note" style="font-size:12px"></div>
+      </div>
+      <div id="concTxt" class="note" style="font-size:12px;margin-top:10px;line-height:1.5"></div>
+      <div class="note" style="margin-top:10px">If the biggest companies are doing the lifting, the headline index can look stronger or weaker than the typical stock. Breadth above tells the same story from the other side.</div>
+    </section>
+  </div>
+
+  <div class="col more-stack" style="margin-top:14px">
+    <details class="card scr"><summary class="scrsum"><b>Sectors</b> <span class="c-mut">· which parts of the index are stretched</span><span class="tag">Tap to open</span></summary>
+      <div id="secTbl" style="overflow-x:auto;margin-top:12px"></div>
+    </details>
+
+    <details class="card scr"><summary class="scrsum"><b>Price ladder</b> <span class="c-mut">· levels from the 52-week high and 200-day</span><span class="tag">Tap to open</span></summary>
+      <div style="margin-top:12px">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <span class="note" style="margin:0">Price levels to watch. The next one is highlighted.</span>
+          <label class="row" style="font-size:11px;color:var(--mut)">Try your own pullback %
+            <input id="custDD" type="number" step="0.5" min="1" max="90" placeholder="e.g. 12" style="width:70px" oninput="renderLadder()"></label>
+        </div>
+        <div id="custOut" class="custout" style="display:none"></div>
+        <div class="g3" style="display:grid;gap:18px;margin:0">
+          <div><div class="lbl" style="margin-bottom:4px">▼ Pullback from 52-week high</div><table class="lad"><tbody id="ladDown"></tbody></table></div>
+          <div><div class="lbl" style="margin-bottom:4px">▲ Extension above 200-day</div><table class="lad"><tbody id="ladUp"></tbody></table></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="card scr" id="scrDet" style="scroll-margin-top:90px"><summary class="scrsum"><b>Full screener</b> <span id="scrSum" class="c-mut"></span><span class="tag">Tap to open all stocks</span></summary><div style="margin-top:12px">
+      <div class="hd">
+        <div><h2>Stock screener</h2><div class="hint" id="scrHint"></div></div>
+        <input id="q" type="text" placeholder="Search ticker / name" oninput="renderTable()" style="width:170px">
+      </div>
+      <div class="row" id="chipsStatus" style="margin-bottom:6px"></div>
+      <div class="row" id="chipsSector" style="margin-bottom:8px"></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th class="s" onclick="sortBy('ticker')">Stock</th>
+            <th class="s" onclick="sortBy('uo')">Momentum</th>
+            <th class="s" onclick="sortBy('rsi')">RSI</th>
+            <th class="s" onclick="sortBy('vs200')">vs 200-day</th>
+            <th class="s" onclick="sortBy('ext')" style="text-align:right">Status</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="tbody" class="mono"></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:space-between;margin-top:8px"><span class="note" id="tcount"></span><button class="btn sm" id="moreBtn" onclick="showAll=!showAll;renderTable()"></button></div>
+    </div></details>
+
+    <details class="card scr" id="logDet"><summary class="scrsum"><b>Signal log</b> <span id="logSum" class="c-mut"></span><span class="tag">Tap to open</span></summary>
+      <div style="margin-top:12px">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="note" style="margin:0">Written when something changes between visits, on this device only</span><button class="btn sm ghost" onclick="clearLog()">Clear</button></div>
+        <div class="log" id="log"></div>
+      </div>
+    </details>
+  </div>
+
+  <footer>Screening aid only, not investment advice. Data is end-of-day, built after the close, and nothing here is live. <span id="verStamp" style="opacity:.6;white-space:nowrap">v1.0.0</span></footer>
+</main>
+
+<div id="veil" onclick="closeDrawer()"></div>
+<aside id="drawer" aria-hidden="true">
+  <div class="dh"><b>Menu</b><button class="btn sm" onclick="closeDrawer()">Close</button></div>
+  <div class="db">
+
+    <fieldset class="autoinfo">
+      <legend>Auto data</legend>
+      <div id="autoInfo" class="note" style="font-size:12px;line-height:1.5"></div>
+      <div class="row" style="margin-top:10px"><button class="btn" onclick="refreshAuto()">Reload data now</button></div>
+    </fieldset>
+
+    <div class="manual">
+      <div class="banner" style="margin:0 0 14px" id="manualBanner"></div>
+
+      <fieldset>
+        <legend>1 · Price history CSV (optional)</legend>
+        <div class="note" style="margin:0 0 8px">For the index shown at the top. Paste or upload a daily CSV from Yahoo or Stooq (Date, High, Low, Close; about a year is plenty). The page computes the oscillator, RSI, averages and 52-week high for you.</div>
+        <input type="file" id="csvFile" accept=".csv,.txt" onchange="loadCsvFile(this)" style="margin-bottom:8px">
+        <textarea id="csvText" rows="4" placeholder="Date,Open,High,Low,Close,Adj Close,Volume&#10;2026-11-03,284.1,286.9,283.0,285.0,285.0,5400000"></textarea>
+        <div class="row" style="margin-top:8px"><button class="btn" onclick="computeCsv()">Compute</button><button class="btn" id="fmpBtn" onclick="fetchFmp()" style="display:none">Fetch from FMP instead</button><span class="msg" id="csvMsg"></span></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>2 · Snapshot for <span id="mSym"></span></legend>
+        <div class="f">
+          <label>As-of date<input id="f_date" type="date"></label>
+          <label>Price<input id="f_price" type="number" step="any"></label>
+          <label>52-wk high<input id="f_peak" type="number" step="any"></label>
+          <label>Momentum / Ultimate Oscillator (0–100)<input id="f_uo" type="number" step="any"></label>
+          <label>RSI 14 (0–100)<input id="f_rsi" type="number" step="any"></label>
+          <label>50-day avg<input id="f_s50" type="number" step="any"></label>
+          <label>200-day avg<input id="f_s200" type="number" step="any"></label>
+          <label>% stocks above 50D<input id="f_br50" type="number" step="any"></label>
+          <label>% stocks above 200D<input id="f_br200" type="number" step="any"></label>
+          <label>Cap − equal-wt %<input id="f_spread" type="number" step="any"></label>
+        </div>
+        <div class="note">Leave blanks for anything you don't have.</div>
+      </fieldset>
+
+      <fieldset>
+        <legend>3 · Stock list (optional)</legend>
+        <div class="note" style="margin:0 0 8px">One per line, paste from a spreadsheet. With a header row: <span class="mono">ticker, name, sector, uo, rsi, vs200</span> (or <span class="mono">price + sma200</span>). Without one: <span class="mono">ticker, uo, rsi, vs200, name, sector</span>.</div>
+        <textarea id="wlText" rows="7"></textarea>
+        <label class="row" style="margin-top:8px;font-size:12px;color:var(--mut)"><input type="checkbox" id="wlMerge" style="width:auto"> Merge instead of replace</label>
+      </fieldset>
+      <div class="row" style="justify-content:flex-end;margin-bottom:14px"><button class="btn pri" onclick="saveUpdate()">Save snapshot</button></div>
+    </div>
+
+    <fieldset id="fmpSet">
+      <legend>Optional: FMP key</legend>
+      <div id="fmpStatus" class="fmpstat"></div>
+      <div class="note" style="margin:8px 0 10px;line-height:1.5"><b>Where it is used:</b> only by the "Fetch from FMP" button in manual mode, in this browser. The automatic daily update does not use this box. If you want FMP as a backup source for that, add the key as a <span class="mono">FMP_API_KEY</span> secret on GitHub instead. Either way the key is optional, and it is never included in exports.</div>
+      <div class="row"><input id="fmpKey" type="password" autocomplete="off" style="flex:1;min-width:180px"><button class="btn pri" id="fmpSaveBtn" onclick="saveFmpKey()">Save key</button></div>
+      <div class="row" style="margin-top:8px"><button class="btn sm" id="fmpTestBtn" onclick="testFmpKey()">Test key</button><button class="btn sm ghost" id="fmpClearBtn" onclick="clearFmpKey()">Remove key</button></div>
+      <div class="msg" id="fmpMsg"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Backup &amp; samples</legend>
+      <div class="row">
+        <button class="btn" onclick="exportJSON()">Export settings/manual data</button>
+        <button class="btn" onclick="$('impFile').click()">Import</button>
+        <input type="file" id="impFile" accept=".json" style="display:none" onchange="importJSON(this)">
+      </div>
+      <div class="row manual" style="margin-top:8px">
+        <button class="btn sm" onclick="loadSample('demo')">Sample: oversold-leaning</button>
+        <button class="btn sm" onclick="loadSample('ob')">Sample: overbought</button>
+      </div>
+      <div class="row" style="margin-top:8px"><button class="btn sm" onclick="resetAll()" style="color:var(--ob)">Reset everything</button></div>
+    </fieldset>
+  </div>
+</aside>
+<div id="toast"></div>
+
+<script>
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => { if (v === null || v === undefined || v === '') return null; const n = parseFloat(String(v).replace(/[%$,\s]/g, '')); return isFinite(n) ? n : null; };
+const fx = (n, d = 1) => n == null ? '—' : n.toFixed(d);
+const sg = (n, d = 1) => n == null ? '—' : (n > 0 ? '+' : '') + n.toFixed(d) + '%';
+const todayISO = () => new Date().toLocaleDateString('en-CA');
+function toast(m){ const t=$('toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',3200); }
+function normDate(s){
+  s = String(s||'').trim().replace(/^"|"$/g,'');
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;
+  const d = new Date(s); if (isNaN(d)) return null;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function ageDays(iso){ if(!iso) return null; const [a,b,c]=iso.split('-').map(Number); const [x,y,z]=todayISO().split('-').map(Number); return Math.round((Date.UTC(x,y-1,z)-Date.UTC(a,b-1,c))/864e5); }
+function fmtDate(iso){ if(!iso) return '—'; const [a,b,c]=iso.split('-').map(Number); return new Date(a,b-1,c).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+/* ================= indicators (used for manual CSV import) ================= */
+function smaSeries(arr, n){
+  const out = new Array(arr.length).fill(null); let s = 0;
+  for (let i = 0; i < arr.length; i++){ s += arr[i]; if (i >= n) s -= arr[i-n]; if (i >= n-1) out[i] = s / n; }
+  return out;
+}
+function rsiSeries(c, n = 14){
+  const out = new Array(c.length).fill(null); if (c.length <= n) return out;
+  let g = 0, l = 0;
+  for (let i = 1; i <= n; i++){ const d = c[i]-c[i-1]; if (d >= 0) g += d; else l -= d; }
+  let ag = g/n, al = l/n; out[n] = al === 0 ? 100 : 100 - 100/(1 + ag/al);
+  for (let i = n+1; i < c.length; i++){
+    const d = c[i]-c[i-1];
+    ag = (ag*(n-1) + (d > 0 ? d : 0))/n; al = (al*(n-1) + (d < 0 ? -d : 0))/n;
+    out[i] = al === 0 ? 100 : 100 - 100/(1 + ag/al);
+  }
+  return out;
+}
+function uoSeries(h, l, c){
+  const n = c.length, bp = [0], tr = [0], out = new Array(n).fill(null);
+  for (let i = 1; i < n; i++){ const lo = Math.min(l[i], c[i-1]), hi = Math.max(h[i], c[i-1]); bp[i] = c[i] - lo; tr[i] = hi - lo; }
+  const win = (a, i, k) => { let s = 0; for (let j = i-k+1; j <= i; j++) s += a[j]; return s; };
+  const avg = (i, k) => { const t = win(tr, i, k); return t === 0 ? 0 : win(bp, i, k)/t; };
+  for (let i = 28; i < n; i++) out[i] = 100 * (4*avg(i,7) + 2*avg(i,14) + avg(i,28)) / 7;
+  return out;
+}
+function parseOHLC(text){
+  const lines = text.replace(/\r/g,'').split('\n').map(x=>x.trim()).filter(Boolean);
+  if (lines.length < 40) throw new Error('Need at least ~40 daily rows (found ' + lines.length + ').');
+  const delim = lines[0].includes('\t') ? '\t' : (lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',');
+  const cells = l => l.split(delim).map(x => x.trim().replace(/^"|"$/g,''));
+  const head = cells(lines[0]).map(x => x.toLowerCase());
+  const iD = head.findIndex(x => x === 'date' || x === 'time' || x === 'datetime');
+  const iH = head.indexOf('high'), iL = head.indexOf('low');
+  let iC = head.indexOf('close'); if (iC < 0) iC = head.findIndex(x => x.startsWith('close') || x === 'last');
+  if (iD < 0 || iH < 0 || iL < 0 || iC < 0) throw new Error('Header row must include Date, High, Low and Close columns.');
+  const rows = [];
+  for (let k = 1; k < lines.length; k++){
+    const p = cells(lines[k]); const d = normDate(p[iD]);
+    const h = num(p[iH]), l = num(p[iL]), c = num(p[iC]);
+    if (d && h != null && l != null && c != null) rows.push({d, h, l, c});
+  }
+  rows.sort((a,b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+  const dedup = rows.filter((r,i) => i === 0 || r.d !== rows[i-1].d);
+  if (dedup.length < 40) throw new Error('Only ' + dedup.length + ' usable rows parsed — check the column layout.');
+  return dedup;
+}
+function computeSeries(rows){
+  const c = rows.map(r=>r.c), h = rows.map(r=>r.h), l = rows.map(r=>r.l);
+  const s50 = smaSeries(c,50), s200 = smaSeries(c,200), r = rsiSeries(c,14), u = uoSeries(h,l,c);
+  return rows.map((x,i) => ({d:x.d, c:x.c, uo:u[i], rsi:r[i], s50:s50[i], s200:s200[i]}));
+}
+
+/* ================= the three base cases ================= */
+// Everything the toggle changes lives here. Edit these numbers if you want different behaviour.
+const PRESETS = {
+  mild: {name:'Pullback',    pct:'~8%',  desc:'Pullback (about 8% drop): flags early and often. Best for spotting routine dips; expect some false alarms.',
+         osTrig:30, osWatch:38, obWatch:62, obTrig:70, rsiLow:35, rsiHigh:65, brLow:30, brHigh:70, ddMin:8,  extHigh:6,  vixHigh:22, vixLow:16},
+  mod:  {name:'Correction',  pct:'~13%', desc:'Correction (about 13% drop): the balanced default. Flags real selloffs, not routine noise.',
+         osTrig:25, osWatch:33, obWatch:67, obTrig:75, rsiLow:30, rsiHigh:70, brLow:25, brHigh:75, ddMin:13, extHigh:10, vixHigh:28, vixLow:14},
+  deep: {name:'Bear market', pct:'~25%', desc:'Bear market (about 25% drop): only rare, extreme stretches. Few signals, but the big ones.',
+         osTrig:20, osWatch:28, obWatch:72, obTrig:80, rsiLow:25, rsiHigh:75, brLow:15, brHigh:85, ddMin:25, extHigh:15, vixHigh:35, vixLow:12}
+};
+const SYMS = ['QQQM','SPY','DIA'];
+const META = {
+  QQQM:{label:'Nasdaq-100', uni:'Nasdaq-100', rel:'QQQ vs QQQE (equal-weight)'},
+  SPY: {label:'S&P 500',    uni:'S&P 500',    rel:'SPY vs RSP (equal-weight)'},
+  DIA: {label:'Dow 30',     uni:'Dow',        rel:null}
+};
+
+/* ================= state ================= */
+const KEY = 'marketStretch.v3';
+let AUTO = null;      // data/market.json when available
+let showAll = false;
+
+const emptySlot = () => ({index:{date:null,price:null,peak:null,uo:null,rsi:null,sma50:null,sma200:null,br50:null,br200:null,spread:null}, history:[], watch:[]});
+const W = (ticker,name,sector,uo,rsi,vs200) => ({ticker,name,sector,uo,rsi,vs200});
+function sampleSlot(kind){
+  if (kind === 'ob') return {
+    index:{date:todayISO(), price:322.10, peak:324.00, uo:83.2, rsi:76.4, sma50:301.5, sma200:276.0, br50:88.0, br200:71.0, spread:3.1}, history:[],
+    watch:[W('NVDA','NVIDIA Corp.','Semiconductors',86.1,78.2,19.4),W('AVGO','Broadcom Inc.','Semiconductors',81.7,74.9,16.0),W('MSFT','Microsoft Corp.','Software',72.3,66.0,9.8),W('AAPL','Apple Inc.','Hardware',58.0,57.2,6.1),W('GOOGL','Alphabet Inc.','Internet',74.9,70.8,12.7),W('AMD','Adv Micro Devices','Semiconductors',47.5,50.3,2.0),W('ADBE','Adobe Inc.','Software',24.0,29.5,-3.0),W('META','Meta Platforms','Internet',63.4,61.0,8.2)]};
+  return {
+    index:{date:todayISO(), price:285.33, peak:318.00, uo:43.37, rsi:null, sma50:null, sma200:null, br50:34.2, br200:null, spread:-2.4}, history:[],
+    watch:[W('MSFT','Microsoft Corp.','Software',38.4,41.2,4.2),W('AAPL','Apple Inc.','Hardware',42.1,44.5,2.8),W('NVDA','NVIDIA Corp.','Semiconductors',18.6,27.4,0.0),W('AMZN','Amazon.com Inc.','Internet',28.2,34.1,1.5),W('GOOGL','Alphabet Inc.','Internet',46.0,48.9,5.1),W('AVGO','Broadcom Inc.','Semiconductors',24.5,31.8,0.8),W('META','Meta Platforms','Internet',39.7,42.0,6.4),W('AMD','Adv Micro Devices','Semiconductors',17.2,25.1,-2.1),W('QCOM','QUALCOMM Inc.','Semiconductors',29.1,33.6,1.2),W('ADBE','Adobe Inc.','Software',27.8,32.4,0.5)]};
+}
+function defaults(){
+  return {preset:'mod', active:'QQQM', sample:'demo', manual:{QQQM:sampleSlot('demo'), SPY:emptySlot(), DIA:emptySlot()},
+    lastSeen:{}, pending:null,
+    log:[{ts:Date.now(), tag:'SYSTEM', msg:'Sample data loaded. Real data appears once the GitHub Action has run.'}]};
+}
+function loadState(){
+  try { const raw = localStorage.getItem(KEY); if (raw){ const s = JSON.parse(raw); if (s && s.manual) return Object.assign(defaults(), s); } } catch(e){}
+  return defaults();
+}
+let S = loadState();
+function persist(){ try { localStorage.setItem(KEY, JSON.stringify({...S, pending:null})); } catch(e){ toast('Could not save to browser storage.'); } }
+
+const slot = sym => (AUTO && AUTO.indices && AUTO.indices[sym]) ? AUTO.indices[sym] : S.manual[sym];
+const SL = () => slot(S.active), IX = () => SL().index, HIST = () => SL().history || [], WATCH = () => SL().watch || [], ST = () => PRESETS[S.preset];
+
+/* ================= analysis ================= */
+function analyze(ix = IX(), st = ST()){
+  const dd  = (ix.price != null && ix.peak)  ? (ix.price/ix.peak - 1)*100 : null;
+  const v50 = (ix.price != null && ix.sma50) ? (ix.price/ix.sma50 - 1)*100 : null;
+  const v200= (ix.price != null && ix.sma200)? (ix.price/ix.sma200 - 1)*100 : null;
+  const c = (label, val, fn, show) => ({label, val, show, ok: val == null ? null : fn(val)});
+  const os = [
+    c('Momentum < '+st.osWatch, ix.uo, v => v < st.osWatch, fx(ix.uo)),
+    c('VIX ≥ '+st.vixHigh+' (fear)', ix.vix, v => v >= st.vixHigh, fx(ix.vix)),
+    c('Breadth < '+st.brLow+'%', ix.br50, v => v < st.brLow, ix.br50 == null ? '—' : fx(ix.br50)+'%'),
+    c('Pullback ≥ '+st.ddMin+'%', dd, v => v <= -st.ddMin, sg(dd))
+  ];
+  const ob = [
+    c('Momentum > '+st.obWatch, ix.uo, v => v > st.obWatch, fx(ix.uo)),
+    c('VIX ≤ '+st.vixLow+' (calm)', ix.vix, v => v <= st.vixLow, fx(ix.vix)),
+    c('Breadth > '+st.brHigh+'%', ix.br50, v => v > st.brHigh, ix.br50 == null ? '—' : fx(ix.br50)+'%'),
+    c('≥ '+st.extHigh+'% above 200-day', v200, v => v >= st.extHigh, sg(v200))
+  ];
+  const osN = os.filter(x=>x.ok===true).length, obN = ob.filter(x=>x.ok===true).length;
+  let key = 'N';
+  if (ix.uo != null && ix.uo <= st.osTrig) key = 'OS';
+  else if (ix.uo != null && ix.uo >= st.obTrig) key = 'OB';
+  else if (osN >= 2 && osN > obN) key = 'WOS';
+  else if (obN >= 2 && obN > osN) key = 'WOB';
+  return {dd, v50, v200, os, ob, osN, obN, key};
+}
+const STATUS = {
+  OS: {t:'▼ OVERSOLD', cls:'os', sub:'The main gauge (Ultimate Oscillator) is past the oversold line.'},
+  WOS:{t:'▼ LEANING OVERSOLD', cls:'wos', sub:'Several gauges are stretched down, but the main gauge has not crossed its line.'},
+  N:  {t:'NEUTRAL', cls:'n', sub:'No stretch in either direction.'},
+  WOB:{t:'▲ LEANING OVERBOUGHT', cls:'wob', sub:'Several gauges are stretched up, but the main gauge has not crossed its line.'},
+  OB: {t:'▲ OVERBOUGHT', cls:'ob', sub:'The main gauge (Ultimate Oscillator) is past the overbought line.'}
+};
+const plain = t => t.replace(/^[▼▲] /,'');
+function stockStatus(s, st = ST()){
+  if (s.uo != null && s.uo <= st.osTrig) return 'OS';
+  if (s.uo != null && s.uo >= st.obTrig) return 'OB';
+  if ((s.uo != null && s.uo < st.osWatch) || (s.rsi != null && s.rsi < st.rsiLow)) return 'WOS';
+  if ((s.uo != null && s.uo > st.obWatch) || (s.rsi != null && s.rsi > st.rsiHigh)) return 'WOB';
+  return 'N';
+}
+const ST_BADGE = {
+  OS:'<span class="pill os">▼ OVERSOLD</span>', WOS:'<span class="pill wos">▼ watch</span>',
+  N:'<span class="pill n">neutral</span>', WOB:'<span class="pill wob">▲ watch</span>', OB:'<span class="pill ob">▲ OVERBOUGHT</span>'
+};
+
+/* ================= render ================= */
+function gauge(v, lo, hi){
+  const pos = v == null ? null : Math.max(0, Math.min(100, v));
+  return `<div class="gauge"><i class="z os" style="width:${lo}%"></i><i class="z ob" style="left:${hi}%;width:${100-hi}%"></i><i class="mid"></i>${pos==null?'':`<b class="mk" style="left:${pos}%"></b>`}</div>
+  <div class="gl"><span>▼ &lt;${lo}</span><span>50</span><span>&gt;${hi} ▲</span></div>`;
+}
+function vixGauge(v, lo, hi){
+  const A = 10, B = 40, pos = v == null ? null : Math.max(0, Math.min(100, (v - A) / (B - A) * 100));
+  const l = Math.max(0, Math.min(100, (lo - A) / (B - A) * 100)), r = Math.max(0, Math.min(100, (hi - A) / (B - A) * 100));
+  return `<div class="gauge"><i class="z" style="left:0;width:${l}%;background:rgba(251,113,133,.35);border-radius:99px 0 0 99px"></i><i class="z" style="left:${r}%;width:${100-r}%;background:rgba(52,211,153,.35);border-radius:0 99px 99px 0"></i>${pos==null?'':`<b class="mk" style="left:${pos}%"></b>`}</div>
+  <div class="gl"><span>calm ≤${lo}</span><span>fear ≥${hi}</span></div>`;
+}
+function vixWord(v, st){ return v == null ? ['no data','c-mut'] : v >= st.vixHigh ? ['Fear (oversold side)','c-os'] : v <= st.vixLow ? ['Calm (overbought side)','c-ob'] : ['Normal range','c-mut']; }
+function zoneWord(v, lo, hi){ if (v==null) return ['no data','c-mut']; if (v<=lo) return ['Oversold','c-os']; if (v>=hi) return ['Overbought','c-ob']; return ['Neutral zone','c-mut']; }
+
+function renderAll(){
+  const ix = IX(), st = ST(), hasData = ix.price != null, A = analyze();
+  const meta = hasData ? {...STATUS[A.key]} : {t:'NO DATA', cls:'n', sub:'No data for this index yet.'};
+  const m = META[S.active];
+  if (hasData){ const u = ix.uo == null ? '—' : fx(ix.uo,0);
+    if (A.key==='WOS') meta.sub = `${A.osN} of 4 checks point to oversold, but the main momentum score (${u}) has not dropped to ${st.osTrig} yet.`;
+    else if (A.key==='WOB') meta.sub = `${A.obN} of 4 checks point to overbought, but the main momentum score (${u}) has not climbed to ${st.obTrig} yet.`;
+    else if (A.key==='OS') meta.sub = `The main momentum score is ${u}, at or below the oversold line of ${st.osTrig}.`;
+    else if (A.key==='OB') meta.sub = `The main momentum score is ${u}, at or above the overbought line of ${st.obTrig}.`;
+    else meta.sub = `Nothing is stretched. The main momentum score is ${u}, between ${st.osTrig} (oversold) and ${st.obTrig} (overbought).`; }
+
+  $('intro').style.display = S.hideIntro ? 'none' : '';
+  $('mainBtn').textContent = AUTO ? 'Reload' : 'Update data';
+  $('banner').innerHTML = (S.sample && !AUTO)
+    ? `<div class="banner"><span><b>Sample data.</b> Made-up numbers for preview. Real data appears after the GitHub Action runs, or enter your own under Update data.</span></div>` : '';
+
+  $('hdrPill').className = 'pill ' + meta.cls; $('hdrPillTxt').textContent = plain(meta.t);
+  document.title = `${S.active} · ${plain(meta.t)}`;
+  $('subSym').textContent = `${m.label} (${S.active})`;
+  const age = ageDays(ix.date);
+  const ageTxt = !hasData ? 'no data' : age == null ? '' : age <= 0 ? 'as of today' : age === 1 ? '1 day old' : `${age} days old`;
+  const ageCol = age != null && age > 4 ? 'var(--ob)' : age != null && age > 1 ? 'var(--warn)' : 'var(--mut)';
+  $('subAge').innerHTML = `${hasData ? 'Closing prices from ' + esc(fmtDate(ix.date)) + ' · ' : ''}<span style="color:${ageCol}">${ageTxt}</span> · ${AUTO ? 'auto-updated' : 'manual data'}`;
+
+  renderStrip();
+  $('heroLbl').textContent = `${m.label} status`;
+  $('heroSt').textContent = meta.t;
+  $('heroSt').style.color = ['os','wos'].includes(meta.cls) ? 'var(--os)' : ['ob','wob'].includes(meta.cls) ? 'var(--ob)' : '#e8edf5';
+  $('heroSub').textContent = meta.sub;
+  $('presetTabs').innerHTML = Object.entries(PRESETS).map(([k,p]) => `<button class="${S.preset===k?'on':''}" onclick="setPreset('${k}')"><span>${p.name}</span><small>${p.pct} drop</small></button>`).join('');
+  $('presetDesc').textContent = ST().desc;
+
+  const known = a => a.filter(x=>x.ok!==null).length;
+  const pips = (el, n) => { $(el).innerHTML = Array.from({length:4},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join(''); };
+  pips('pipOS', A.osN); pips('pipOB', A.obN);
+  $('pipOSn').textContent = `${A.osN} / ${known(A.os)}`; $('pipOBn').textContent = `${A.obN} / ${known(A.ob)}`;
+
+  const [uz,ucl] = zoneWord(ix.uo, st.osTrig, st.obTrig), [rz,rcl] = zoneWord(ix.rsi, st.rsiLow, st.rsiHigh), [bz,bcl] = zoneWord(ix.br50, st.brLow, st.brHigh);
+  const [vz,vcl] = vixWord(ix.vix, st);
+  const ddTxt = A.dd == null ? '' : (A.dd > -0.05 ? 'At 52-week high' : sg(A.dd,2) + ' from 52-week high');
+  const trend = (v, name) => v == null ? `<span class="c-mut">${name} —</span>` : `<span class="${v>=0?'':'c-warn'}">${name} ${sg(v)}</span>`;
+  $('kpis').innerHTML = `
+    <div class="card"><div class="lbl">${esc(S.active)} price</div>
+      <div class="big mono">${ix.price==null?'—':'$'+ix.price.toFixed(2)}</div>
+      <div class="note" style="font-size:12px;color:${A.dd!=null&&A.dd<=-st.ddMin?'var(--os)':'var(--mut)'}">${ddTxt||'—'}</div>
+      <div class="note">52-week high ${ix.peak==null?'—':'$'+ix.peak.toFixed(2)}</div></div>
+    <div class="card"><div class="lbl">Momentum score</div>
+      <div class="big mono ${ucl}">${fx(ix.uo,1)}</div><div class="note ${ucl}" style="font-size:12px">${uz}</div>${gauge(ix.uo, st.osTrig, st.obTrig)}<div class="note">Ultimate Oscillator, 0–100. Low = beaten down, high = stretched up.</div></div>
+    <div class="card"><div class="lbl">Breadth · ${esc(m.uni)} above 50-day</div>
+      <div class="big mono ${bcl}">${ix.br50==null?'—':fx(ix.br50,1)+'%'}</div><div class="note ${bcl}" style="font-size:12px">${bz}${ix.br200!=null?` · above 200-day: ${fx(ix.br200,1)}%`:''}</div>${gauge(ix.br50, st.brLow, st.brHigh)}</div>
+    <div class="card"><div class="lbl">VIX · market fear level</div>
+      <div class="big mono ${vcl}">${ix.vix==null?'—':fx(ix.vix,1)}</div><div class="note ${vcl}" style="font-size:12px">${vz}</div>${ix.vix==null?'':vixGauge(ix.vix, st.vixLow, st.vixHigh)}
+      ${ix.vixpct==null?'':`<div class="note">${ix.vixpct>=99?'Highest in the past year':'Higher than '+ix.vixpct+'% of the past year'}${ix.vix5!=null?` · ${ix.vix5>0?'▲':'▼'} ${ix.vix5>0?'+':''}${fx(ix.vix5,1)} in 5 days`:''}</div>`}</div>
+    <div class="card"><div class="lbl">Price vs its averages</div>
+      <div class="big mono" style="font-size:16px">${trend(A.v50,'vs 50-day avg')}</div>
+      <div class="big mono" style="font-size:16px;margin-top:2px">${trend(A.v200,'vs 200-day avg')}</div>
+      <div class="note">${A.v200==null?'Needs the 200-day average':A.v200>=st.extHigh?'Well above its long-term average':A.v200<0?'Below its long-term average':'Close to its long-term average'}</div></div>`;
+
+  const list = (arr, el, cls) => { $(el).innerHTML = arr.map(x => `<li><span><span class="chk ${x.ok===true?cls:'c-mut'}">${x.ok===true?'✓':x.ok===false?'✗':'–'}</span>${esc(x.label)}</span><span class="mono ${x.ok===true?cls:'c-mut'}">${esc(x.show)}</span></li>`).join(''); };
+  list(A.os,'cfOS','c-os'); list(A.ob,'cfOB','c-ob');
+  $('cfOSn').textContent = `${A.osN}/${known(A.os)}`; $('cfOBn').textContent = `${A.obN}/${known(A.ob)}`;
+  $('cfNote').textContent = `Using the "${st.name}" setting. The headline turns oversold when the momentum score is at or below ${st.osTrig}, and overbought at or above ${st.obTrig}.`;
+
+  renderRead(A); renderInternals(); renderExtremes(); renderSectors(); renderHist();
+  renderRel(); renderLadder(); renderTable(); renderLog(); drawChart();
+}
+
+
+/* ---- market internals: breadth trend, highs/lows, volume, signal age ---- */
+function internalsData(){
+  const H = HIST(), st = ST(), n = H.length;
+  const d = {n};
+  const lastWith = k => { for (let i = n-1; i >= 0; i--) if (H[i][k] != null) return i; return -1; };
+  const iB = lastWith('b50');
+  if (iB >= 0){
+    d.b50 = H[iB].b50;
+    const j = iB - 10;
+    if (j >= 0 && H[j].b50 != null) d.b50chg = H[iB].b50 - H[j].b50;
+    if (H[iB].b200 != null){ d.b200 = H[iB].b200; if (j >= 0 && H[j].b200 != null) d.b200chg = H[iB].b200 - H[j].b200; }
+  }
+  const iH = lastWith('nh');
+  if (iH >= 0){ d.nh = H[iH].nh; d.nl = H[iH].nl; }
+  const iV = lastWith('vx');
+  if (iV >= 0 && n > 1){
+    d.vx = H[iV].vx;
+    const a = H[n-1].c, b = H[n-2].c;
+    if (a != null && b) d.dayChg = (a / b - 1) * 100;
+  }
+  const stOf = r => r.uo == null ? null : r.uo <= st.osTrig ? 'OS' : r.uo >= st.obTrig ? 'OB' : 'N';
+  if (n && stOf(H[n-1])){
+    const s0 = stOf(H[n-1]); let i = n - 1;
+    while (i >= 0 && stOf(H[i]) === s0) i--;
+    d.state = s0; d.streak = n - 1 - i;
+    if (s0 === 'N'){
+      let k = i; while (k >= 0 && stOf(H[k]) === 'N') k--;
+      d.lastTrig = k >= 0 ? {state: stOf(H[k]), date: H[k].d} : null;
+    } else {
+      let k = i; while (k >= 0 && stOf(H[k]) !== s0) k--;
+      d.prior = k >= 0 ? {date: H[k].d, ago: n - 1 - k} : null;
+    }
+  }
+  return d;
+}
+const volWord = x => x >= 1.5 ? 'Heavy' : x >= 1.15 ? 'Above normal' : x <= 0.7 ? 'Light' : 'Normal';
+function renderInternals(){
+  const tabOk = HIST().some(r => r.b50 != null);
+  $('tabBreadth').style.display = tabOk ? '' : 'none';
+  if (!tabOk && cMetric === 'b50'){ cMetric = 'price'; setOn('tabsMetric', document.querySelector('#tabsMetric button[data-v="price"]')); }
+  const D = internalsData(), st = ST(), m = META[S.active], w = WATCH(), el = $('intBody');
+  const rows = [];
+  const arrow = v => v > 0.5 ? '▲' : v < -0.5 ? '▼' : '●';
+  if (D.b50 != null){
+    const c = D.b50chg;
+    const word = c == null ? '' : c >= 5 ? 'Improving' : c <= -5 ? 'Weakening' : 'Steady';
+    rows.push(['Breadth', `<b>${fx(D.b50,0)}%</b> of ${esc(m.uni)} stocks above their 50-day`
+      + (c != null ? ` · ${arrow(c)} ${c>0?'+':''}${fx(c,0)} pts in 10 days` : ''),
+      (word ? `${word}. ` : '') + (D.b200 != null ? `Above 200-day: ${fx(D.b200,0)}%${D.b200chg!=null?` (${D.b200chg>0?'+':''}${fx(D.b200chg,0)} pts)`:''}.` : '')]);
+  }
+  if (D.nh != null){
+    const nn = w.length, cnt = p => nn ? ` (${Math.round(p*nn/100)} of ${nn})` : '';
+    const diff = D.nh - D.nl;
+    rows.push(['New highs / lows', `<b>${fx(D.nh,0)}%</b> at 52-week highs${cnt(D.nh)} · <b>${fx(D.nl,0)}%</b> at lows${cnt(D.nl)}`,
+      diff >= 10 ? 'Highs clearly outnumber lows.' : diff <= -10 ? 'Lows clearly outnumber highs.' : 'Mixed: no strong lean either way.']);
+  }
+  if (D.vx != null){
+    const dn = D.dayChg;
+    let hint = '';
+    if (D.vx >= 1.5 && dn != null && dn <= -0.5) hint = ' A selloff on heavy volume can be a washout, but it is not proof of a bottom.';
+    else if (D.vx >= 1.5 && dn != null && dn >= 0.5) hint = ' A rally on heavy volume means broad participation.';
+    else if (D.vx <= 0.7) hint = ' Quiet trading: moves on light volume are less convincing.';
+    rows.push([`Trading volume`, `<b>${D.vx.toFixed(1)}×</b> its 50-day average${dn != null ? ` on ${dn<0?'a down':'an up'} day (${sg(dn,1)})` : ''}`, `${volWord(D.vx)} (${esc(S.active)} fund volume).${hint}`]);
+  }
+  if (D.state){
+    const word = D.state === 'OS' ? 'oversold' : 'overbought';
+    if (D.state === 'N'){
+      rows.push(['How long', D.lastTrig
+        ? `<b>${D.streak} day${D.streak===1?'':'s'}</b> since the last oversold/overbought trigger`
+        : `<b>No trigger</b> in the last ${D.n} trading days`,
+        D.lastTrig ? `Last: ${D.lastTrig.state==='OS'?'oversold':'overbought'} on ${fmtDate(D.lastTrig.date)}.` : 'Neither oversold nor overbought at the trigger level.']);
+    } else {
+      rows.push(['How long', `<b>Day ${D.streak + 1}</b> of this ${word} reading`,
+        D.prior ? `The previous ${word} reading ended ${D.prior.ago} trading days ago (${fmtDate(D.prior.date)}).` : `First ${word} reading in the ${D.n} trading days of history.`]);
+    }
+  }
+  el.innerHTML = rows.length
+    ? rows.map(r => `<div class="ir"><div class="k">${r[0]}</div><div><div class="v">${r[1]}</div>${r[2] ? `<div class="s">${r[2]}</div>` : ''}</div></div>`).join('')
+    : `<div class="note" style="font-size:12px">Breadth trend, new highs/lows and volume appear after the next automatic data update.</div>`;
+}
+
+/* ---- plain-English read-out ---- */
+const known = a => a.filter(x => x.ok !== null).length;
+function sectorStats(){
+  const g = {};
+  WATCH().forEach(s => { const k = s.sector || 'Other'; (g[k] = g[k] || []).push(s); });
+  return Object.entries(g).map(([name, a]) => {
+    const u = a.filter(s => s.uo != null), v = a.filter(s => s.vs200 != null);
+    return {name, n:a.length, avg: u.length ? u.reduce((t,s)=>t+s.uo,0)/u.length : null,
+      os:a.filter(s=>stockStatus(s)==='OS').length, ob:a.filter(s=>stockStatus(s)==='OB').length,
+      above: v.length ? 100*v.filter(s=>s.vs200>0).length/v.length : null};
+  }).sort((a,b) => (a.avg??99) - (b.avg??99));
+}
+function renderRead(A){
+  const ix = IX(), m = META[S.active], st = ST(), w = WATCH(), el = $('readTxt');
+  if (ix.price == null){ el.textContent = 'No data for this index yet.'; return; }
+  const lab = {OS:'oversold', WOS:'leaning oversold', N:'neutral', WOB:'leaning overbought', OB:'overbought'}[A.key];
+  const p = [`<b>${esc(m.label)} is ${lab}.</b>`];
+  const okO = A.os.filter(x=>x.ok), okB = A.ob.filter(x=>x.ok);
+  if (okO.length) p.push(`Oversold checks met (${okO.length} of ${known(A.os)}): ${okO.map(x=>esc(x.label)).join(', ')}.`);
+  if (okB.length) p.push(`Overbought checks met (${okB.length} of ${known(A.ob)}): ${okB.map(x=>esc(x.label)).join(', ')}.`);
+  if (!okO.length && !okB.length) p.push('None of the stretch checks are triggered.');
+  if (ix.br50 != null){
+    const wd = ix.br50 <= st.brLow ? 'very weak' : ix.br50 < 45 ? 'weak' : ix.br50 <= 55 ? 'middling' : ix.br50 < st.brHigh ? 'healthy' : 'very broad, which can also mean stretched';
+    p.push(`Breadth is ${wd}: ${fx(ix.br50,0)}% of ${esc(m.uni)} stocks are above their 50-day average.`);
+  }
+  if (w.length){
+    const nO = w.filter(s=>stockStatus(s)==='OS').length, nB = w.filter(s=>stockStatus(s)==='OB').length;
+    p.push(`Of ${w.length} stocks: ${nO} oversold, ${nB} overbought.`);
+    const sec = sectorStats().filter(x=>x.avg!=null && x.n>=3);
+    if (sec.length >= 3) p.push(`Weakest sector: ${esc(sec[0].name)} (avg ${fx(sec[0].avg,0)}); strongest: ${esc(sec[sec.length-1].name)} (avg ${fx(sec[sec.length-1].avg,0)}).`);
+  }
+  { const D = internalsData();
+    if (D.b50chg != null && Math.abs(D.b50chg) >= 8) p.push(`Breadth has ${D.b50chg>0?'improved':'weakened'} by ${fx(Math.abs(D.b50chg),0)} points over the last 10 trading days.`);
+    if (D.vx != null && D.vx >= 1.5) p.push(`Volume is heavy at ${D.vx.toFixed(1)}× its 50-day average${D.dayChg!=null?` on ${D.dayChg<0?'a down':'an up'} day`:''}.`);
+    if (D.state && D.state !== 'N') p.push(`This is day ${D.streak+1} of the ${D.state==='OS'?'oversold':'overbought'} reading${D.prior?'':' (the first in the history we have)'}.`); }
+  if (ix.vix != null) p.push(`The VIX is ${fx(ix.vix,1)} (${ix.vix>=st.vixHigh?'fear is elevated':ix.vix<=st.vixLow?'markets are calm, which can mean complacency':'a normal range'}${ix.vixpct!=null?`; ${ix.vixpct>=99?'the highest in the past year':'higher than '+ix.vixpct+'% of the past year'}`:''}).`);
+  if (m.rel && ix.spread != null) p.push(`Over the last month the cap-weighted ${S.active==='QQQM'?'Nasdaq-100':'S&P 500'} is ${fx(Math.abs(ix.spread),1)} points ${ix.spread<0?'behind':'ahead of'} its equal-weight twin.`);
+  el.innerHTML = p.join(' ');
+}
+function miniBar(v, st){ return v==null ? '' : `<span class="mini" style="background:linear-gradient(to right,rgba(52,211,153,.4) 0 ${st.osTrig}%,#1a2336 ${st.osTrig}% ${st.obTrig}%,rgba(251,113,133,.4) ${st.obTrig}% 100%)"><i style="left:${Math.max(0,Math.min(100,v))}%"></i></span>`; }
+function renderExtremes(){
+  const st = ST(), w = WATCH().filter(s => s.uo != null);
+  const row = (s, cls) => `<div class="xr"><b>${esc(s.ticker)}</b><span class="nm">${esc(s.name||'')}</span><span class="mono ${cls}">${fx(s.uo)}</span>${miniBar(s.uo, st)}<span class="mono c-mut" style="min-width:92px;text-align:right;font-size:11px">${s.vs200==null?'':sg(s.vs200,0)+' vs 200-day'}</span></div>`;
+  const os = w.filter(s => ['OS','WOS'].includes(stockStatus(s))).sort((a,b)=>a.uo-b.uo);
+  const ob = w.filter(s => ['OB','WOB'].includes(stockStatus(s))).sort((a,b)=>b.uo-a.uo);
+  const none = '<div class="note" style="padding:10px 0;font-size:12px">None flagged right now.</div>';
+  $('osHint').textContent = `${os.length} stock${os.length===1?'':'s'} looking stretched down (${os.filter(s=>stockStatus(s)==='OS').length} strongly) · lowest momentum first`;
+  $('obHint').textContent = `${ob.length} stock${ob.length===1?'':'s'} looking stretched up (${ob.filter(s=>stockStatus(s)==='OB').length} strongly) · highest momentum first`;
+  $('osList').innerHTML = os.length ? os.slice(0,8).map(s=>row(s,'c-os')).join('') + (os.length>8 ? `<button class="more" onclick="openScreener('OS')">+${os.length-8} more · open full screener ›</button>` : '') : none;
+  $('obList').innerHTML = ob.length ? ob.slice(0,8).map(s=>row(s,'c-ob')).join('') + (ob.length>8 ? `<button class="more" onclick="openScreener('OB')">+${ob.length-8} more · open full screener ›</button>` : '') : none;
+}
+function renderSectors(){
+  const st = ST(), sec = sectorStats();
+  if (sec.length < 2){ $('secTbl').innerHTML = '<div class="note" style="font-size:12px">Sector data appears with the automatic update (stock lists with sectors).</div>'; return; }
+  $('secTbl').innerHTML = `<table class="ht"><thead><tr><th>Sector</th><th>#</th><th>Avg momentum</th><th>▼</th><th>▲</th><th>Above 200-day</th></tr></thead><tbody>` +
+    sec.map(x => `<tr><td>${esc(x.name)}</td><td class="mono c-mut">${x.n}</td><td class="mono ${x.avg==null?'':x.avg<=st.osWatch?'c-os':x.avg>=st.obWatch?'c-ob':''}">${fx(x.avg,0)}${miniBar(x.avg, st)}</td><td class="mono ${x.os?'c-os':'c-mut'}">${x.os}</td><td class="mono ${x.ob?'c-ob':'c-mut'}">${x.ob}</td><td class="mono c-mut">${x.above==null?'—':fx(x.above,0)+'%'}</td></tr>`).join('') + '</tbody></table>';
+}
+function renderHist(){
+  const s = AUTO && AUTO.stats && AUTO.stats[S.active], el = $('histBody');
+  $('histTitle').textContent = 'What happened after past signals';
+  if (!s || !s.rules || !s.rules[S.preset]){
+    $('histHint').textContent = '';
+    el.innerHTML = '<div class="note" style="font-size:12px">This fills in after the GitHub Action has run. It looks back over the index\'s full price history and shows what happened after each past oversold or overbought reading.</div>'; return;
+  }
+  const r = s.rules[S.preset], b = s.baseline, ix = IX(), name = esc(s.src);
+  $('histHint').textContent = `${s.src} since ${s.from.slice(0,4)} · how it did after readings like these · "${ST().name}" setting`;
+  const H = [['21','1 month later'],['63','3 months later'],['126','6 months later']];
+  const upTxt = (c, base) => base || c.n > 12 ? `higher ${fx(c.pos,0)}% of the time` : `higher ${Math.round(c.pos*c.n/100)} of ${c.n} times`;
+  const cell = (c, base) => !c || !c.n || c.med == null ? '<div class="hc c-mut">—</div>' :
+    `<div class="hc"><div class="hv mono ${c.med>=0?'c-os':'c-ob'}">${sg(c.med)}</div><div class="hs">${upTxt(c, base)}</div><div class="hw">${base?'worst':'weakest'}: ${sg(c.worst)}</div></div>`;
+  const block = (title, sub, cls, o, extra) => `<div class="hb ${extra||''}">
+      <div class="hbt"><span class="${cls}"><b>${title}</b></span>${o.now?'<span class="pill n" style="margin-left:8px">● today</span>':''}${o.few?'<span class="pill wob" style="margin-left:8px;color:var(--warn);border-color:rgba(251,191,36,.5)">too few to trust</span>':''}</div>
+      <div class="hbs">${sub}</div>
+      <div class="hcells">${H.map(([k,l]) => `<div><div class="hh">${l}</div>${cell(o.fwd[k], o.base)}</div>`).join('')}</div></div>`;
+  const osN = r.os.episodes, obN = r.ob.episodes, uo = ix.uo;
+  const osNow = uo != null && uo <= r.os.trig, obNow = uo != null && uo >= r.ob.trig;
+  // plain-English takeaways at the 3-month mark
+  const take = (label, o) => {
+    const c = o.fwd['63'], bb = b['63'];
+    if (!c || !c.n) return '';
+    const hi = c.n > 12 ? `${fx(c.pos,0)}% of the time` : `${Math.round(c.pos*c.n/100)} of ${c.n} times`;
+    let t = `After ${label} readings, ${name} was higher 3 months later ${hi} (typical ${sg(c.med)}); on a random day it was higher ${fx(bb.pos,0)}% of the time (typical ${sg(bb.med)}).`;
+    if (o.episodes < 8) t += ` With only ${o.episodes} cases this is a hint, not evidence.`;
+    else if (label === 'overbought') t += c.med < 0 ? ' Overbought readings were followed by losses on average.' : c.med < bb.med ? ' Overbought readings were followed by smaller gains than usual, not by losses.' : ' Overbought readings were followed by gains at least as large as usual, so on this history they were not a sell signal.';
+    else if (label === 'oversold') t += c.med > bb.med ? ' Oversold readings were followed by bigger gains than usual.' : ' Oversold readings were not followed by better results than a random day.';
+    return t;
+  };
+  el.innerHTML =
+    block('▼ When it was oversold', `Momentum score at or below ${r.os.trig} · happened ${osN} time${osN===1?'':'s'}`, 'c-os', {fwd:r.os.fwd, now:osNow, few:osN<8}) +
+    block('▲ When it was overbought', `Momentum score at or above ${r.ob.trig} · happened ${obN} time${obN===1?'':'s'}`, 'c-ob', {fwd:r.ob.fwd, now:obNow, few:obN<8}) +
+    block('A random day, for comparison', 'Every trading day in the history', 'c-mut', {fwd:b, base:true}, 'hbase') +
+    `<div class="read" style="margin-top:12px;font-size:12px">${[take('oversold', {fwd:r.os.fwd, episodes:osN}), take('overbought', {fwd:r.ob.fwd, episodes:obN})].filter(Boolean).join('<br><br>')}</div>
+    <div class="note" style="margin-top:8px;line-height:1.5"><b>How to read it:</b> "typical" is the middle result across past cases, "weakest" is the single worst case. Compare each row with the random-day row, since the index rises most of the time anyway. Past results are not a forecast. This tests only the Ultimate Oscillator trigger, not the breadth, VIX or pullback checks. Readings less than a month apart count as one case.</div>`;
+}
+
+function renderStrip(){
+  $('idxStrip').innerHTML = SYMS.map(sym => {
+    const sl = slot(sym), has = sl && sl.index.price != null; let inner;
+    if (!has) inner = '<div class="note">No data yet</div>';
+    else { const a = analyze(sl.index), mt = STATUS[a.key];
+      inner = `<span class="pill ${mt.cls}">${mt.t}</span><div class="note mono" style="margin-top:6px">momentum ${fx(sl.index.uo,0)} · breadth ${sl.index.br50==null?'—':fx(sl.index.br50,0)+'%'}</div>`; }
+    return `<button class="tile ${sym===S.active?'on':''}" onclick="setActive('${sym}')"><div class="lbl">${META[sym].label}</div><div style="font-size:11px;color:var(--mut);margin:2px 0 8px">${sym} fund${has?' · $'+sl.index.price.toFixed(2):''}</div>${inner}</button>`;
+  }).join('');
+}
+function setActive(sym){ S.active = sym; showAll = false; fStatus = 'ALL'; fSector = 'ALL'; hoverI = null; persist(); renderAll(); }
+function hideIntro(){ S.hideIntro = true; persist(); $('intro').style.display = 'none'; }
+function setPreset(k){ S.preset = k; persist(); renderAll(); }
+
+function renderRel(){
+  const m = META[S.active], sp = IX().spread;
+  $('relHint').textContent = m.rel ? 'Is the index being carried by a few giants? ' + m.rel : 'Not applicable';
+  $('relLbl').textContent = m.rel ? 'Cap-weight minus equal-weight, last month' : 'Price-weighted index';
+  $('relVal').textContent = m.rel ? sg(sp) : '—';
+  $('relTxt').textContent = !m.rel ? 'The Dow weights by share price, so there is no matching equal-weight comparison.'
+    : sp == null ? 'No data yet.'
+    : sp < 0 ? 'Equal-weight is ahead: the move is broad, the biggest companies are lagging.'
+    : sp > 0 ? 'Cap-weight is ahead: the biggest companies are carrying the move.' : 'Tied.';
+  const ix = IX();
+  $('concTxt').innerHTML = ix.top10 == null ? '' :
+    `Top 10 stocks ≈ <b>${fx(ix.top10,0)}%</b> of the index${ix.top10>=45?' (high concentration)':''}, top 3 ≈ ${fx(ix.top3,0)}%${ix.topNames?': '+esc(ix.topNames.slice(0,3).join(', ')):''}.${ix.topApprox?' Approximate, from market caps.':S.active==='DIA'?' Dow weights follow share price.':''}`;
+}
+
+function renderLadder(){
+  const ix = IX(), A = analyze();
+  const cv0 = num($('custDD').value), cv = (cv0 != null && cv0 >= 0.5 && cv0 <= 90) ? Math.round(cv0*10)/10 : null;
+  const down = [5,8,10,12,15,20,25,30]; let nextMarked = false;
+  if (cv != null && !down.includes(cv)) { down.push(cv); down.sort((a,b)=>a-b); }
+  $('ladDown').innerHTML = (ix.peak && ix.price!=null) ? down.map(p => {
+    const px = ix.peak*(1-p/100), reached = A.dd != null && -A.dd >= p, next = !reached && !nextMarked; if (next) nextMarked = true;
+    const mine = cv != null && p === cv;
+    return `<tr class="${mine?'mine':reached?'reached':next?'next':''}"><td>−${p}%${mine?' <span class="pill n" style="margin-left:4px">your level</span>':''}</td><td class="mono">$${px.toFixed(2)}</td><td class="mono c-mut">${sg((px/ix.price-1)*100)}</td><td style="text-align:right">${reached?'<span class="c-os">reached</span>':next?'<span style="color:var(--acc)">next</span>':''}</td></tr>`;
+  }).join('') : `<tr><td class="c-mut">No price data yet</td></tr>`;
+  const up = [5,10,15,20]; let nextU = false;
+  $('ladUp').innerHTML = (ix.sma200 && ix.price!=null) ? up.map(p => {
+    const px = ix.sma200*(1+p/100), reached = A.v200 != null && A.v200 >= p, next = !reached && !nextU; if (next) nextU = true;
+    return `<tr class="${reached?'reached':next?'next':''}"><td>+${p}%</td><td class="mono">$${px.toFixed(2)}</td><td class="mono c-mut">${sg((px/ix.price-1)*100)}</td><td style="text-align:right">${reached?'<span class="c-ob">reached</span>':next?'<span style="color:var(--acc)">next</span>':''}</td></tr>`;
+  }).join('') : `<tr><td class="c-mut">Needs the 200-day average</td></tr>`;
+  const co = $('custOut');
+  if (cv != null && ix.peak && ix.price != null){
+    const px = ix.peak*(1-cv/100);
+    co.style.display = ''; co.innerHTML = `<b>A ${cv}% pullback from the 52-week high</b> is <b class="mono">$${px.toFixed(2)}</b>, which is ${fx(Math.abs((px/ix.price-1)*100),1)}% ${px<ix.price?'below':'above'} today's price. It is marked in the table below.`;
+  } else { co.style.display = 'none'; co.textContent = ''; }
+}
+
+/* screener */
+let sortKey = 'ext', sortAsc = false, fStatus = 'ALL', fSector = 'ALL';
+function openScreener(status){
+  fStatus = status === 'OS' ? 'XOS' : status === 'OB' ? 'XOB' : 'ALL'; showAll = false; sortKey = status ? 'uo' : 'ext'; sortAsc = (status === 'OS');
+  const d = $('scrDet'); d.open = true; renderTable();
+  setTimeout(() => d.scrollIntoView({behavior:'smooth', block:'start'}), 30);
+}
+const LIMIT = 15;
+function sortBy(k){ if (sortKey===k) sortAsc = !sortAsc; else { sortKey=k; sortAsc = k==='ticker'||k==='uo'||k==='rsi'||k==='vs200'; } renderTable(); }
+function renderTable(){
+  const st = ST(), q = ($('q').value||'').toLowerCase(), watch = WATCH();
+  $('scrHint').textContent = `${META[S.active].uni} members, most stretched first`;
+  $('scrSum').textContent = watch.length ? `· ${watch.length} stocks, filter and sort` : '· no stock data yet';
+  const cnt = k => watch.filter(s => stockStatus(s)===k).length;
+  const chips = [['ALL','All',watch.length],['XOS','▼ Oversold side',cnt('OS')+cnt('WOS')],['XOB','▲ Overbought side',cnt('OB')+cnt('WOB')]];
+  $('chipsStatus').innerHTML = chips.map(c => `<button class="chip ${fStatus===c[0]?'on':''}" onclick="fStatus='${c[0]}';showAll=false;renderTable()">${c[1]} · ${c[2]}</button>`).join('');
+  const secs = ['ALL', ...Array.from(new Set(watch.map(s=>s.sector||'Other'))).sort()];
+  if (!secs.includes(fSector)) fSector = 'ALL';
+  $('chipsSector').innerHTML = secs.length>2 ? secs.map(s => `<button class="chip ${fSector===s?'on':''}" data-s="${esc(s)}" onclick="fSector=this.dataset.s;showAll=false;renderTable()">${s==='ALL'?'All sectors':esc(s)}</button>`).join('') : '';
+  let rows = watch.filter(s => (fStatus==='ALL'||(fStatus==='XOS'?['OS','WOS'].includes(stockStatus(s)):fStatus==='XOB'?['OB','WOB'].includes(stockStatus(s)):stockStatus(s)===fStatus)) && (fSector==='ALL'||(s.sector||'Other')===fSector) && (s.ticker.toLowerCase().includes(q)||(s.name||'').toLowerCase().includes(q)));
+  const val = s => sortKey==='ext' ? (s.uo==null?-1:Math.abs(s.uo-50)) : s[sortKey];
+  rows.sort((a,b) => { const x=val(a), y=val(b); if (x==null) return 1; if (y==null) return -1; const r = typeof x==='string' ? x.localeCompare(y) : x-y; return sortAsc ? r : -r; });
+  const total = rows.length, shown = showAll ? rows : rows.slice(0, LIMIT);
+  $('tbody').innerHTML = shown.length ? shown.map(s => {
+    const k = stockStatus(s);
+    const uc = k==='OS'||k==='WOS' ? 'c-os' : k==='OB'||k==='WOB' ? 'c-ob' : '';
+    const rc = s.rsi==null?'': s.rsi<st.rsiLow?'c-os': s.rsi>st.rsiHigh?'c-ob':'';
+    const bar = s.uo==null?'': `<span class="mini" style="background:linear-gradient(to right,rgba(52,211,153,.4) 0 ${st.osTrig}%,#1a2336 ${st.osTrig}% ${st.obTrig}%,rgba(251,113,133,.4) ${st.obTrig}% 100%)"><i style="left:${Math.max(0,Math.min(100,s.uo))}%"></i></span>`;
+    return `<tr><td><b style="color:#fff">${esc(s.ticker)}</b><div style="font-size:10px;color:var(--mut);font-family:system-ui">${esc(s.name||'')}</div></td>
+      <td class="${uc}">${fx(s.uo)}${bar}</td><td class="${rc}">${fx(s.rsi)}</td>
+      <td>${s.vs200==null?'—':sg(s.vs200)}</td><td style="text-align:right">${ST_BADGE[k]}</td>
+      <td>${AUTO?'':`<button class="x" title="Remove" data-t="${esc(s.ticker)}" onclick="delStock(this.dataset.t)">×</button>`}</td></tr>`;
+  }).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--mut);padding:18px;font-family:system-ui">${watch.length?'No stocks match these filters':'No stock data for this index yet'}</td></tr>`;
+  $('tcount').textContent = `Showing ${shown.length} of ${total}`;
+  const mb = $('moreBtn'); mb.style.display = total > LIMIT ? '' : 'none'; mb.textContent = showAll ? 'Show top ' + LIMIT : 'Show all ' + total;
+}
+function delStock(t){ const sl = S.manual[S.active]; sl.watch = sl.watch.filter(s=>s.ticker!==t); persist(); renderAll(); }
+
+/* log */
+function addLog(tag, msg){ S.log.unshift({ts:Date.now(), tag, msg}); S.log = S.log.slice(0,80); }
+function renderLog(){
+  $('logSum').textContent = S.log.length ? `· ${S.log.length} entr${S.log.length===1?'y':'ies'}` : '· nothing yet';
+  const col = {STATUS:'var(--acc)', SCREENER:'var(--os)', SNAPSHOT:'var(--mut)', SYSTEM:'var(--dim)'};
+  $('log').innerHTML = S.log.length ? S.log.map(l => `<div><span class="t mono">${new Date(l.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span><span class="g mono" style="color:${col[l.tag]||'var(--mut)'}">[${l.tag}]</span><span>${esc(l.msg)}</span></div>`).join('') : '<div class="c-mut">No entries yet.</div>';
+}
+function clearLog(){ S.log = []; persist(); renderLog(); }
+
+/* change detection between visits (auto data only) */
+function logChanges(){
+  if (!AUTO) return; let changed = false;
+  if (!S.autoSeen){ S.autoSeen = true; S.log = S.log.filter(l => !l.msg.startsWith('Sample data loaded')); addLog('SYSTEM', 'Auto data connected.'); changed = true; }
+  SYMS.forEach(sym => {
+    const sl = AUTO.indices[sym]; if (!sl) return;
+    const key = analyze(sl.index).key, asof = sl.index.date;
+    const os = sl.watch.filter(s => stockStatus(s)==='OS').map(s=>s.ticker), ob = sl.watch.filter(s => stockStatus(s)==='OB').map(s=>s.ticker);
+    const prev = S.lastSeen[sym];
+    if (prev && prev.preset === S.preset && prev.asof !== asof){
+      if (prev.key !== key) addLog('STATUS', `${sym}: ${plain(STATUS[prev.key].t)} → ${plain(STATUS[key].t)} (data ${asof})`);
+      const nOS = os.filter(t => !prev.os.includes(t)), nOB = ob.filter(t => !prev.ob.includes(t));
+      const lst = a => a.slice(0,12).join(', ') + (a.length>12 ? ` +${a.length-12} more` : '');
+      if (nOS.length) addLog('SCREENER', `${sym} newly oversold: ${lst(nOS)}`);
+      if (nOB.length) addLog('SCREENER', `${sym} newly overbought: ${lst(nOB)}`);
+    }
+    if (!prev || prev.asof !== asof || prev.preset !== S.preset){ S.lastSeen[sym] = {asof, key, os, ob, preset:S.preset}; changed = true; }
+  });
+  if (changed) persist();
+}
+
+/* ================= chart ================= */
+let cMetric = 'price', cRange = 126, hoverI = null, geo = null;
+document.querySelectorAll('#tabsMetric button').forEach(b => b.onclick = () => { cMetric=b.dataset.v; setOn('tabsMetric',b); hoverI=null; drawChart(); });
+document.querySelectorAll('#tabsRange button').forEach(b => b.onclick = () => { cRange=+b.dataset.v; setOn('tabsRange',b); hoverI=null; drawChart(); });
+function setOn(id,btn){ document.querySelectorAll('#'+id+' button').forEach(x=>x.classList.toggle('on',x===btn)); }
+function drawChart(){
+  const cv = $('chart'), box = cv.parentElement, dpr = window.devicePixelRatio||1;
+  const W = box.clientWidth, H = box.clientHeight; if (!W||!H) return;
+  cv.width = W*dpr; cv.height = H*dpr; const g = cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const key = cMetric==='price'?'c':cMetric, st = ST();
+  let pts = HIST().filter(p => p[key] != null); if (cRange) pts = pts.slice(-cRange);
+  $('chartHint').textContent = pts.length ? `${pts.length} trading days · ${fmtDate(pts[0].d)} → ${fmtDate(pts[pts.length-1].d)}` : '';
+  const old = box.querySelector('.empty'); if (old) old.remove();
+  geo = null; $('tip').style.display='none';
+  if (pts.length < 2){
+    const e = document.createElement('div'); e.className='empty';
+    e.innerHTML = 'No history yet for this index.<br>It fills in automatically once the GitHub Action has run,<br>or import a price CSV under Update data.';
+    box.appendChild(e); return;
+  }
+  const L=44,R=12,T=10,B=22, pw=W-L-R, ph=H-T-B;
+  let lo,hi;
+  if (cMetric==='price'){
+    let a=[]; pts.forEach(p=>{a.push(p.c); if(p.s50!=null)a.push(p.s50); if(p.s200!=null)a.push(p.s200);});
+    lo=Math.min(...a); hi=Math.max(...a); const pad=(hi-lo)*.06||1; lo-=pad; hi+=pad;
+  } else { lo=0; hi=100; }
+  const X = i => L + (i/(pts.length-1))*pw, Y = v => T + (1-(v-lo)/(hi-lo))*ph;
+  if (cMetric!=='price'){
+    const zl = cMetric==='uo'?st.osTrig:cMetric==='b50'?st.brLow:st.rsiLow, zh = cMetric==='uo'?st.obTrig:cMetric==='b50'?st.brHigh:st.rsiHigh;
+    g.fillStyle='rgba(52,211,153,.10)'; g.fillRect(L,Y(zl),pw,Y(0)-Y(zl));
+    g.fillStyle='rgba(251,113,133,.10)'; g.fillRect(L,Y(100),pw,Y(zh)-Y(100));
+    g.setLineDash([4,4]); g.strokeStyle='rgba(148,163,184,.35)'; g.lineWidth=1;
+    [zl,zh,50].forEach(v=>{g.beginPath();g.moveTo(L,Y(v));g.lineTo(L+pw,Y(v));g.stroke();});
+    g.setLineDash([]);
+  }
+  g.fillStyle='#5b6a82'; g.font='10px ui-monospace,Menlo,monospace'; g.textAlign='right'; g.strokeStyle='rgba(42,56,80,.5)'; g.lineWidth=1;
+  if (cMetric==='price'){ for(let k=0;k<=4;k++){ const v=lo+(hi-lo)*k/4; g.beginPath(); g.moveTo(L,Y(v)); g.lineTo(L+pw,Y(v)); g.stroke(); g.fillText(v.toFixed(0),L-6,Y(v)+3);} }
+  else { [0,20,50,80,100].forEach(v=>g.fillText(v,L-6,Y(v)+3)); }
+  g.textAlign='center'; [0,Math.floor((pts.length-1)/2),pts.length-1].forEach(i=>g.fillText(pts[i].d.slice(2),Math.min(Math.max(X(i),L+22),W-R-22),H-6));
+  const line = (k,color,w) => { g.beginPath(); let started=false; pts.forEach((p,i)=>{ if(p[k]==null){started=false;return;} const x=X(i),y=Y(p[k]); if(!started){g.moveTo(x,y);started=true;} else g.lineTo(x,y); }); g.strokeStyle=color; g.lineWidth=w; g.stroke(); };
+  if (cMetric==='price'){ line('s200','#a78bfa',1.2); line('s50','#fbbf24',1.2); const pk = IX().peak; if(pk && pk>lo && pk<hi){ g.setLineDash([3,4]); g.strokeStyle='rgba(251,113,133,.5)'; g.beginPath(); g.moveTo(L,Y(pk)); g.lineTo(L+pw,Y(pk)); g.stroke(); g.setLineDash([]);} line('c','#e8edf5',1.8); }
+  else line(key,'#818cf8',1.8);
+  geo = {pts, X, Y, L, pw, key, W, H};
+  if (hoverI != null && pts[hoverI]){
+    const p = pts[hoverI], x = X(hoverI);
+    g.strokeStyle='rgba(255,255,255,.3)'; g.lineWidth=1; g.beginPath(); g.moveTo(x,T); g.lineTo(x,T+ph); g.stroke();
+    g.fillStyle='#fff'; g.beginPath(); g.arc(x,Y(p[key]),3.5,0,7); g.fill();
+    const tip = $('tip'); tip.style.display='block';
+    tip.innerHTML = `<b>${fmtDate(p.d)}</b><br>` + (cMetric==='price' ? `Close $${p.c.toFixed(2)}${p.s50!=null?`<br>50-day $${p.s50.toFixed(2)}`:''}${p.s200!=null?`<br>200-day $${p.s200.toFixed(2)}`:''}` : `${cMetric==='uo'?'Momentum':cMetric==='b50'?'Above 50-day':'RSI'} ${p[key].toFixed(1)}${cMetric==='b50'?'%':''}`);
+    tip.style.left = Math.min(x+12, W-130) + 'px'; tip.style.top = '8px';
+  }
+}
+$('chart').addEventListener('mousemove', e => {
+  if (!geo) return; const r = $('chart').getBoundingClientRect(), x = e.clientX - r.left;
+  const i = Math.round(((x-geo.L)/geo.pw)*(geo.pts.length-1)); hoverI = Math.max(0,Math.min(geo.pts.length-1,i)); drawChart();
+});
+$('chart').addEventListener('mouseleave', () => { hoverI=null; drawChart(); });
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz=setTimeout(drawChart,80); });
+
+/* ================= auto data ================= */
+async function loadAuto(){
+  for (const u of ['data/market.json', '../data/market.json']){
+    try {
+      const r = await fetch(u + '?t=' + Date.now(), {cache:'no-store'}); if (!r.ok) continue;
+      const j = await r.json(); if (j && j.indices && Object.keys(j.indices).length){ AUTO = j; return true; }
+    } catch(e){}
+  }
+  AUTO = null; return false;
+}
+async function refreshAuto(){ const ok = await loadAuto(); logChanges(); renderAll(); closeDrawer(); toast(ok ? 'Data reloaded.' : 'No auto data found.'); }
+function mainAction(){ AUTO ? refreshAuto() : openDrawer(); }
+
+/* ================= drawer / manual entry ================= */
+const FIELDS = {f_date:'date', f_price:'price', f_peak:'peak', f_uo:'uo', f_rsi:'rsi', f_s50:'sma50', f_s200:'sma200', f_br50:'br50', f_br200:'br200', f_spread:'spread'};
+function openDrawer(){
+  const dr = $('drawer'); dr.classList.toggle('auto', !!AUTO);
+  if (AUTO){
+    const n = Object.entries(AUTO.indices).map(([k,v]) => `${k}: ${v.watch.length} stocks, data through ${v.index.date}`).join('<br>');
+    $('autoInfo').innerHTML = `Built ${esc(new Date(AUTO.generated).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'}))} by the scheduled GitHub Action.<br><br>${n}<br><br>Automatic data is on, so the manual entry forms are hidden. There is no switch: they reappear on their own only if the automatic data can't be loaded.`;
+  } else {
+    const ix = S.manual[S.active].index;
+    $('mSym').textContent = S.active;
+    $('manualBanner').textContent = 'Auto data not found (it needs data/market.json from the GitHub Action, and the page must be opened from the website, not as a local file). Manual entry works in the meantime.';
+    Object.entries(FIELDS).forEach(([id,k]) => { $(id).value = (k==='date') ? (ix.date||todayISO()) : (ix[k] ?? ''); });
+    if (S.sample) $('f_date').value = todayISO();
+    $('wlText').value = watchToCSV(); $('wlMerge').checked = false;
+    $('csvText').value=''; $('csvMsg').textContent=''; S.pending=null;
+    $('fmpBtn').style.display = S.fmpKey ? '' : 'none';
+  }
+  renderFmp(); $('fmpMsg').textContent = '';
+  $('veil').style.display='block'; dr.classList.add('open'); dr.setAttribute('aria-hidden','false');
+}
+function closeDrawer(){ $('veil').style.display='none'; $('drawer').classList.remove('open'); $('drawer').setAttribute('aria-hidden','true'); }
+function watchToCSV(){ return ['ticker,uo,rsi,vs200,name,sector', ...S.manual[S.active].watch.map(s => [s.ticker, s.uo??'', s.rsi??'', s.vs200??'', (s.name||'').replace(/,/g,' '), (s.sector||'').replace(/,/g,' ')].join(','))].join('\n'); }
+
+function loadCsvFile(inp){ const f = inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { $('csvText').value = r.result; computeCsv(); }; r.readAsText(f); }
+function applyRows(rows, label){
+  const msg = $('csvMsg'), ser = computeSeries(rows), last = ser[ser.length-1];
+  const peak = Math.max(...rows.slice(-252).map(r=>r.c));
+  S.pending = ser;
+  const set = (id, v, d=2) => { $(id).value = v==null ? '' : (+v).toFixed(d); };
+  set('f_price', last.c); set('f_peak', peak); set('f_uo', last.uo); set('f_rsi', last.rsi); set('f_s50', last.s50); set('f_s200', last.s200);
+  $('f_date').value = last.d;
+  msg.style.color = 'var(--os)';
+  msg.textContent = `✓ ${label}: ${rows.length} rows (${rows[0].d} → ${last.d}). UO ${fx(last.uo,1)}, RSI ${fx(last.rsi,1)}. Review, then Save.`;
+}
+function computeCsv(){
+  const msg = $('csvMsg'); msg.style.color='var(--mut)';
+  try { applyRows(parseOHLC($('csvText').value), 'CSV'); }
+  catch(e){ S.pending = null; msg.style.color='var(--ob)'; msg.textContent = '✗ ' + e.message; }
+}
+async function fetchFmp(){
+  const msg = $('csvMsg'); msg.style.color = 'var(--mut)';
+  if (!S.fmpKey){ msg.style.color='var(--ob)'; msg.textContent = '✗ Add your FMP key below first.'; return; }
+  msg.textContent = 'Fetching from FMP…';
+  try {
+    const r = await fetch(`https://financialmodelingprep.com/stable/historical-price-eod/full?symbol=${encodeURIComponent(S.active)}&apikey=${encodeURIComponent(S.fmpKey)}`);
+    if (!r.ok) throw new Error(r.status === 401 || r.status === 402 || r.status === 403 ? 'FMP rejected the key, or this data is not on your plan.' : r.status === 429 ? 'FMP daily limit reached.' : 'FMP returned error ' + r.status + '.');
+    const j = await r.json(), arr = Array.isArray(j) ? j : (j.historical || []);
+    const rows = arr.map(x => ({d: normDate(x.date), h: num(x.high), l: num(x.low), c: num(x.close)})).filter(x => x.d && x.h != null && x.l != null && x.c != null);
+    rows.sort((a,b) => a.d < b.d ? -1 : 1);
+    if (rows.length < 40) throw new Error('FMP returned too little data (' + rows.length + ' rows).');
+    applyRows(rows.slice(-400), 'FMP');
+  } catch(e){
+    S.pending = null; msg.style.color = 'var(--ob)';
+    msg.textContent = '✗ ' + (e instanceof TypeError ? 'The browser blocked the request or you are offline. Use the GitHub secret route or paste a CSV.' : e.message);
+  }
+}
+function renderFmp(){
+  const k = S.fmpKey, st = $('fmpStatus');
+  st.className = 'fmpstat ' + (k ? 'on' : '');
+  st.innerHTML = k
+    ? `<span class="pill os">✓ Key saved</span><span class="mono c-mut">••••${esc(k.slice(-4))}</span><span class="note" style="margin:0">stored in this browser</span>`
+    : `<span class="pill n">No key saved</span>`;
+  $('fmpKey').placeholder = k ? 'Paste a new key to replace the saved one' : 'Paste your FMP API key';
+  $('fmpTestBtn').style.display = $('fmpClearBtn').style.display = k ? '' : 'none';
+  $('fmpSaveBtn').textContent = k ? 'Replace key' : 'Save key';
+}
+function saveFmpKey(){
+  const v = $('fmpKey').value.trim(), m = $('fmpMsg');
+  if (!v){ m.style.color = 'var(--ob)'; m.textContent = '✗ Paste a key into the box first.'; return; }
+  S.fmpKey = v; persist(); $('fmpKey').value = ''; renderFmp();
+  m.style.color = 'var(--os)'; m.textContent = '✓ Saved. The box clears on purpose so the key is not left on screen.';
+  toast('FMP key saved');
+  const b = $('fmpSaveBtn'); b.textContent = 'Saved ✓'; setTimeout(renderFmp, 2000);
+  $('fmpBtn').style.display = AUTO ? 'none' : '';
+}
+function clearFmpKey(){
+  delete S.fmpKey; persist(); renderFmp();
+  const m = $('fmpMsg'); m.style.color = 'var(--mut)'; m.textContent = 'Key removed from this browser.';
+  $('fmpBtn').style.display = 'none'; toast('FMP key removed');
+}
+async function testFmpKey(){
+  const m = $('fmpMsg');
+  if (!S.fmpKey){ m.style.color = 'var(--ob)'; m.textContent = '✗ Save a key first.'; return; }
+  m.style.color = 'var(--mut)'; m.textContent = 'Testing with one request to FMP…';
+  try {
+    const r = await fetch(`https://financialmodelingprep.com/stable/quote?symbol=SPY&apikey=${encodeURIComponent(S.fmpKey)}`);
+    const j = await r.json().catch(() => null);
+    if (r.status === 429){ m.style.color = 'var(--warn)'; m.textContent = 'FMP says the daily limit was reached. The key itself looks fine.'; }
+    else if (r.status === 401 || r.status === 403 || (j && !Array.isArray(j) && (j['Error Message'] || j.error))){
+      m.style.color = 'var(--ob)'; m.textContent = '✗ FMP rejected this key. Check it was copied in full, then use Replace key.'; }
+    else if (r.ok && Array.isArray(j) && j.length){ m.style.color = 'var(--os)'; m.textContent = '✓ FMP accepted the key.'; }
+    else { m.style.color = 'var(--warn)'; m.textContent = `FMP answered (HTTP ${r.status}) but the reply was unexpected, so I cannot confirm the key.`; }
+  } catch(e){
+    m.style.color = 'var(--warn)';
+    m.textContent = 'Your browser blocked the test request (common with direct FMP calls). That does not mean the key is wrong.';
+  }
+}
+
+function parseWatch(txt){
+  const lines = txt.replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(Boolean);
+  if (!lines.length) return {rows:[], skipped:0};
+  const delim = lines[0].includes('\t') ? '\t' : (lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',');
+  const split = l => l.split(delim).map(x=>x.trim().replace(/^"|"$/g,''));
+  const alias = {ticker:'ticker',symbol:'ticker',name:'name',company:'name',sector:'sector',group:'sector',uo:'uo',ultosc:'uo',ultimateoscillator:'uo',rsi:'rsi',rsi14:'rsi',vs200:'vs200',vs200d:'vs200',pctvs200:'vs200',price:'price',last:'price',close:'price',sma200:'sma200','200dma':'sma200'};
+  const first = split(lines[0]).map(x => alias[x.toLowerCase().replace(/[^a-z0-9]/g,'')]);
+  let cols, body;
+  if (first.includes('ticker')){ cols = first; body = lines.slice(1); } else { cols = ['ticker','uo','rsi','vs200','name','sector']; body = lines; }
+  const rows = []; let skipped = 0;
+  body.forEach(l => {
+    const p = split(l), o = {}; cols.forEach((c,i) => { if (c) o[c] = p[i]; });
+    const t = (o.ticker||'').toUpperCase();
+    if (!/^[A-Z0-9.\-^]{1,10}$/.test(t)) { skipped++; return; }
+    const price = num(o.price), s200 = num(o.sma200);
+    let vs = num(o.vs200); if (vs==null && price!=null && s200) vs = (price/s200-1)*100;
+    const uo = num(o.uo), rsi = num(o.rsi);
+    if ((uo!=null && (uo<0||uo>100)) || (rsi!=null && (rsi<0||rsi>100))) { skipped++; return; }
+    rows.push({ticker:t, name:o.name||'', sector:o.sector||'Other', uo, rsi, vs200: vs==null?null:Math.round(vs*100)/100});
+  });
+  return {rows, skipped};
+}
+
+function saveUpdate(){
+  const v = {}; Object.entries(FIELDS).forEach(([id,k]) => { v[k] = k==='date' ? $(id).value.trim() : num($(id).value); });
+  v.date = v.date || todayISO();
+  const bad = (k,lo,hi) => v[k]!=null && (v[k]<lo || v[k]>hi);
+  if (v.price==null || v.price<=0) return toast('Price is required.');
+  if (bad('uo',0,100)||bad('rsi',0,100)||bad('br50',0,100)||bad('br200',0,100)) return toast('Momentum, RSI and breadth must be between 0 and 100.');
+  const w = parseWatch($('wlText').value);
+  if (!w.rows.length && $('wlText').value.trim()) return toast('Could not read any valid stock rows.');
+  const sl = S.manual[S.active];
+  const prevKeys = {}; sl.watch.forEach(s => prevKeys[s.ticker] = stockStatus(s));
+  const prevIdx = sl.index.price == null ? null : analyze(sl.index).key;
+
+  sl.index = v;
+  if ($('wlMerge').checked){ const m = new Map(sl.watch.map(s=>[s.ticker,s])); w.rows.forEach(r => m.set(r.ticker, {...(m.get(r.ticker)||{}), ...r})); sl.watch = Array.from(m.values()); }
+  else sl.watch = w.rows;
+
+  const map = new Map(sl.history.map(p => [p.d, p]));
+  if (S.pending) S.pending.forEach(p => { const o = map.get(p.d)||{}; map.set(p.d, {...o, ...p}); });
+  const cur = map.get(v.date) || {d:v.date};
+  Object.entries({c:v.price, uo:v.uo, rsi:v.rsi, s50:v.sma50, s200:v.sma200}).forEach(([k,val]) => { if (val != null) cur[k] = val; });
+  map.set(v.date, cur);
+  sl.history = Array.from(map.values()).sort((a,b) => a.d < b.d ? -1 : 1);
+  S.pending = null;
+
+  const A = analyze(sl.index);
+  addLog('SNAPSHOT', `${S.active}: saved $${v.price.toFixed(2)} · UO ${fx(v.uo)} · RSI ${fx(v.rsi)}`);
+  if (!S.sample){
+    if (prevIdx && A.key !== prevIdx) addLog('STATUS', `${S.active}: ${plain(STATUS[prevIdx].t)} → ${plain(STATUS[A.key].t)}`);
+    const nOS = sl.watch.filter(s => stockStatus(s)==='OS' && prevKeys[s.ticker]!=='OS').map(s=>s.ticker);
+    const nOB = sl.watch.filter(s => stockStatus(s)==='OB' && prevKeys[s.ticker]!=='OB').map(s=>s.ticker);
+    if (nOS.length) addLog('SCREENER', `Newly oversold: ${nOS.join(', ')}`);
+    if (nOB.length) addLog('SCREENER', `Newly overbought: ${nOB.join(', ')}`);
+  }
+  if (w.skipped) toast(`${w.skipped} stock line(s) skipped (bad ticker or out-of-range value).`);
+  S.sample = null; persist(); closeDrawer(); renderAll();
+  if (!w.skipped) toast('Saved.');
+}
+
+/* data tools */
+function exportJSON(){
+  const out = {...S, pending:null}; delete out.fmpKey;
+  const blob = new Blob([JSON.stringify(out, null, 1)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `market-stretch-${todayISO()}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function importJSON(inp){
+  const f = inp.files[0]; if (!f) return; const r = new FileReader();
+  r.onload = () => { try { const s = JSON.parse(r.result); if (!s || !s.manual) throw 0; const k = S.fmpKey; S = Object.assign(defaults(), s, {pending:null}); if (k) S.fmpKey = k; persist(); closeDrawer(); renderAll(); toast('Imported.'); } catch(e){ toast('That file is not a valid backup.'); } inp.value=''; };
+  r.readAsText(f);
+}
+function loadSample(k){ S.manual[S.active] = sampleSlot(k); S.sample = k; persist(); closeDrawer(); renderAll(); }
+function resetAll(){ if (confirm('Erase all saved settings and manual data in this browser?')) { S = defaults(); persist(); closeDrawer(); renderAll(); } }
+
+/* ================= start ================= */
+loadAuto().then(() => { logChanges(); renderAll(); });
+
+/* service worker (offline shell; data stays network-first) */
+if ('serviceWorker' in navigator){
+  const hadCtl = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadCtl) toast('Updated. Reload for the latest version.'); });
+}
+</script>
+</body>
+</html>
