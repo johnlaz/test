@@ -88,7 +88,7 @@ Default text model: `openai/gpt-oss-120b`. Camera identification picks a vision-
 - Inventory, photos, logs, notes and settings are stored in your browser's **localStorage** on your device. There is no sync and no account.
 - When you use a **scan** or **AI fill**, the photo or the make/model you entered is sent to **Groq**, using your key, and the answer comes back. Nothing is sent unless you use an AI feature.
 - Your API key is stored locally, sent only to Groq, and **never included in backups**. Re-enter it after restoring on a new device.
-- localStorage holds roughly 5 MB. The bar on the *Settings* home screen shows how much you have used; photos are the main cost.
+- Records live in `localStorage` (about 5 million characters, plenty for thousands of firearms); photos and attached documents live in IndexedDB, limited by free disk space. The *Settings* home screen shows both.
 - Clearing site data or uninstalling the app erases your vault. **Export a backup regularly.**
 - All GitHub Pages apps on `johnlaz.github.io` share one browser origin, so a stored key is visible to other apps on that origin. Keys are namespaced (`armory_*`) so they do not collide.
 
@@ -106,6 +106,14 @@ To ship a change:
 **Installs and the APK.** The manifest `id` is pinned to `/armory/index.html` so installs made before the `/app/` move keep their identity. Old installs launch the landing page, which sends standalone launches to `/app/`. The APK opens the app inside the same scope (`/armory/`), so it should keep working; if it does not, rebuild it with start URL `https://johnlaz.github.io/armory/app/index.html`.
 
 ## Changelog
+
+### 3.3.0
+- **Photos moved to IndexedDB.** Browsers cap `localStorage` at about 5 million characters per site, and photos stored as text filled it with a few dozen firearms. Records, settings and notes stay in `localStorage`; every large photo, gallery image and attached document now lives in IndexedDB, limited by free disk space instead. A 60-firearm vault with 24 million characters of photos saved and reloaded identically in testing, where the old limit was about 5 million.
+- **Automatic, one-time migration:** the first launch of 3.3.0 moves existing inline photos into IndexedDB. Photos are written first and the record list is switched over only after they are safely stored, so an interrupted migration leaves the old data intact. Unused photos are cleaned up on launch.
+- **Saves never fail silently.** If storage is full or a write fails, a message stays on screen and says the last change was not saved. (Before, a full `localStorage` made the save throw with no visible message.)
+- **Storage meter is accurate:** shows records against the real record limit plus photo usage and free space on the device. The app also asks the browser to keep its storage persistent.
+- Offline copies load their vault through the same path, so large baked vaults no longer risk the 5 MB limit when first opened. Backups (`.json`) and offline copies still contain full images.
+- If IndexedDB is unavailable (some private modes), ARMORY falls back to the old everything-in-`localStorage` behavior.
 
 ### 3.2.0
 - **Offline copy ("bake"):** *Settings → Backup & offline copy → Bake offline copy* writes one self-contained `.html` — the app, the Excel library, the demo photos and your whole vault (firearms, photos, range logs, maintenance, sold records, notes) all inlined. Open it in any browser with no internet and no install; on first open it loads the baked vault into that browser's storage. Opening a newer offline copy on a browser that already has a vault asks before replacing it. Restore also accepts an offline copy (`.json` or `.html`).

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ARMORY v3.2.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
+<!-- ARMORY v3.3.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,7 +22,7 @@
 
 <style>
 /* ═══════════════════════════════════════════════════════════
-   ARMORY v3.2.0 — iOS Dark Mode Design System
+   ARMORY v3.3.0 — iOS Dark Mode Design System
    Lazzaro Standard · Premium Firearms Vault
    ═══════════════════════════════════════════════════════════ */
 
@@ -2217,7 +2217,7 @@ select.filter-select:focus { border-color: var(--accent); }
   <div class="as-logo" style="font-size:72px;color:var(--accent-fg);">⬡</div>
   <div class="as-name">ARMORY</div>
   <div class="as-tag">FIREARMS INVENTORY SYSTEM</div>
-  <div class="as-ver" data-app-version>v3.2.0</div>
+  <div class="as-ver" data-app-version>v3.3.0</div>
   <button class="as-enter" onclick="splashEnter()">Enter →</button>
 </div>
 
@@ -2687,7 +2687,7 @@ select.filter-select:focus { border-color: var(--accent); }
           </button>
           <button class="sm-row" onclick="settingsGo('about')">
             <span class="sm-ico">ℹ️</span>
-            <span class="sm-txt"><strong>About &amp; help</strong><small><span data-app-version>v3.2.0</span> · guide, notes, our story</small></span>
+            <span class="sm-txt"><strong>About &amp; help</strong><small><span data-app-version>v3.3.0</span> · guide, notes, our story</small></span>
             <span class="sm-chev">›</span>
           </button>
         </div>
@@ -2811,7 +2811,7 @@ select.filter-select:focus { border-color: var(--accent); }
 
         <div style="text-align:center;padding:4px 0 18px">
           <div style="font-family:var(--heading);font-size:38px;letter-spacing:6px;color:var(--accent-fg);text-shadow:0 0 24px rgba(200,168,75,0.35)">⬡ ARMORY</div>
-          <div style="font-family:var(--font);font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-top:4px">FIREARMS INVENTORY SYSTEM · <span data-app-version>v3.2.0</span></div>
+          <div style="font-family:var(--font);font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-top:4px">FIREARMS INVENTORY SYSTEM · <span data-app-version>v3.3.0</span></div>
         </div>
 
         <div class="sm-group">
@@ -2842,7 +2842,7 @@ select.filter-select:focus { border-color: var(--accent); }
         </div>
 
         <div style="font-family:var(--font);font-size:10px;color:var(--text-dim);text-align:center;padding:8px 0;line-height:1.7">
-          <span data-app-version>v3.2.0</span> · © 2026 LAZLAB Creations. All Rights Reserved.<br>
+          <span data-app-version>v3.3.0</span> · © 2026 LAZLAB Creations. All Rights Reserved.<br>
           <a href="mailto:lazlab.io@gmail.com" style="color:inherit">lazlab.io@gmail.com</a> · All data stays on your device
         </div>
       </div>
@@ -2902,7 +2902,7 @@ select.filter-select:focus { border-color: var(--accent); }
 // ══════════════════════════════════════════
 //  APP VERSION — single source of truth (also drives the service-worker cache name)
 // ══════════════════════════════════════════
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.3.0';
 function stampVersion() {
   document.querySelectorAll('[data-app-version]').forEach(el => { el.textContent = 'v' + APP_VERSION; });
 }
@@ -2923,10 +2923,142 @@ function absImg(u) {
 // ══════════════════════════════════════════
 //  DATA STORE
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  PHOTO / FILE STORE (IndexedDB)  — v3.3
+//  localStorage is capped at ~5 million characters per site, and photos are stored as text, so a few dozen
+//  photos fill it. The vault's records stay in localStorage (small, synchronous, easy to inspect), but every
+//  large data: URL (photos, gallery, attached documents) is moved into IndexedDB — limited by free disk space,
+//  not 5 MB — and the record keeps a short "idb:<hash>" reference instead. The app still works with full
+//  images in memory; only what is written to disk changes. Content-addressed, so identical images are stored
+//  once and unchanged photos are never rewritten. If IndexedDB is unavailable the app falls back to the old
+//  all-in-localStorage behaviour.
+// ══════════════════════════════════════════
+const BlobStore = (() => {
+  const DB_NAME = 'armory-blobs', STORE = 'blobs', MIN_LEN = 3000, REF_RE = /^idb:[0-9a-f]{8,}$/;
+  let db = null, ok = false;
+  const known = new Set();            // refs confirmed present in IndexedDB
+  const refCache = new Map();         // data URL string -> ref (avoids re-hashing unchanged photos on every save)
+
+  const ready = new Promise(res => {
+    try {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      req.onsuccess = () => { db = req.result; ok = true; res(true); };
+      req.onerror = req.onblocked = () => res(false);
+    } catch (e) { res(false); }
+  });
+
+  function hash(s) {                  // cyrb53 — fast, 53-bit; combined with the length it is collision-safe at this scale
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16) + s.length.toString(16);
+  }
+  function refFor(s) { let r = refCache.get(s); if (!r) { r = 'idb:' + hash(s); refCache.set(s, r); } return r; }
+
+  // Serialise an array for localStorage, swapping big data: URLs for refs. Returns the JSON and any blobs still to be stored.
+  function pack(value) {
+    if (!ok) return { json: JSON.stringify(value), blobs: new Map() };
+    const blobs = new Map();
+    const json = JSON.stringify(value, (k, v) => {
+      if (typeof v === 'string' && v.length > MIN_LEN && v.startsWith('data:')) {
+        const r = refFor(v); if (!known.has(r)) blobs.set(r, v); return r;
+      }
+      return v;
+    });
+    return { json, blobs };
+  }
+
+  function putAll(blobs) {
+    return new Promise((res, rej) => {
+      const tx = db.transaction(STORE, 'readwrite'), st = tx.objectStore(STORE);
+      blobs.forEach((v, r) => st.put(v, r));
+      tx.oncomplete = () => { blobs.forEach((v, r) => known.add(r)); res(); };
+      tx.onerror = tx.onabort = () => rej(tx.error || new Error('IndexedDB write failed'));
+    });
+  }
+  function getMany(refs) {
+    return new Promise(res => {
+      const out = new Map(); if (!refs.length) return res(out);
+      const tx = db.transaction(STORE, 'readonly'), st = tx.objectStore(STORE);
+      refs.forEach(r => { const q = st.get(r); q.onsuccess = () => { if (typeof q.result === 'string') { out.set(r, q.result); known.add(r); refCache.set(q.result, r); } }; });
+      tx.oncomplete = () => res(out); tx.onerror = tx.onabort = () => res(out);
+    });
+  }
+  // Replace refs with their data URLs, in place. Returns how many could not be found.
+  function unref(node, map, stat) {
+    stat = stat || { missing: 0 };
+    if (Array.isArray(node)) { for (let i = 0; i < node.length; i++) node[i] = unrefVal(node[i], map, stat); }
+    else if (node && typeof node === 'object') { for (const k in node) node[k] = unrefVal(node[k], map, stat); }
+    return stat;
+  }
+  function unrefVal(v, map, stat) {
+    if (typeof v === 'string') { if (REF_RE.test(v)) { if (map.has(v)) return map.get(v); stat.missing++; return v; } return v; }
+    if (v && typeof v === 'object') unref(v, map, stat);
+    return v;
+  }
+  // Delete stored blobs that no saved record points at any more.
+  function gc(lsKeys) {
+    return new Promise(res => {
+      const used = new Set();
+      lsKeys.forEach(k => { const m = (localStorage.getItem(k) || '').match(/idb:[0-9a-f]{8,}/g); if (m) m.forEach(r => used.add(r)); });
+      const tx = db.transaction(STORE, 'readwrite'), st = tx.objectStore(STORE), cur = st.openKeyCursor();
+      cur.onsuccess = () => { const c = cur.result; if (!c) return; if (!used.has(c.key)) { st.delete(c.key); known.delete(c.key); } c.continue(); };
+      tx.oncomplete = () => res(); tx.onerror = tx.onabort = () => res();
+    });
+  }
+  return { ready, pack, putAll, getMany, unref, gc, get ok() { return ok; } };
+})();
+
+let _persistChain = Promise.resolve();
+
+function _storageFail(e) {
+  console.error('ARMORY save failed', e);
+  const quota = e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota|full/i.test(e.message || ''));
+  showToast(quota
+    ? 'Storage is full — your last change was NOT saved. Export a backup, then remove some photos.'
+    : 'Could not save your last change — ' + ((e && e.message) || 'unknown error') + '. Export a backup to be safe.', 'error', 9000);
+}
+
+// Snapshot now (so order is preserved), write blobs first, then the small record list. If any step fails the
+// previous saved state stays intact and the person is told — saves never fail silently.
+function _persistVault(key, arr) {
+  let packed;
+  try { packed = BlobStore.pack(arr); } catch (e) { _storageFail(e); return; }
+  _persistChain = _persistChain.then(async () => {
+    try {
+      if (packed.blobs.size) await BlobStore.putAll(packed.blobs);
+      localStorage.setItem(key, packed.json);
+    } catch (e) { _storageFail(e); }
+  });
+  return _persistChain;
+}
+
+// Boot: swap refs back to full images, migrate any old inline photos into IndexedDB, drop orphaned blobs.
+async function hydrateVault() {
+  const keys = ['armory_inventory', 'armory_sold'];
+  if (!(await BlobStore.ready)) return;
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  const refs = new Set();
+  keys.forEach(k => { const m = (localStorage.getItem(k) || '').match(/idb:[0-9a-f]{8,}/g); if (m) m.forEach(r => refs.add(r)); });
+  if (refs.size) {
+    const map = await BlobStore.getMany([...refs]);
+    const stat = { missing: 0 };
+    BlobStore.unref(inventory, map, stat); BlobStore.unref(soldInventory, map, stat);
+    if (stat.missing) showToast(stat.missing + ' photo(s) could not be loaded from this device\'s storage — restore from a backup to recover them.', 'error', 9000);
+  }
+  const legacy = keys.some(k => /"data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,/i.test(localStorage.getItem(k) || ''));
+  if (legacy) { _persistVault('armory_inventory', inventory); _persistVault('armory_sold', soldInventory); }   // one-time migration
+  await _persistChain;
+  await BlobStore.gc(keys);
+}
+
 // ── PRELOADED INVENTORY ──
 const _PRELOAD_DATA = [{"id":"mn5m61ndd7c4985mlta","type":"SHOTGUN","condition":"EXCELLENT","make":"TTI Taran Tactical Innovations","model":"Dracary","caliber":"12 Gauge","serial_number":"","barrel_length":"18.5 in","capacity":"6+1","action":"Semi-Auto","value":"7500","notes":"The TTI Taran Tactical Innovations Dracarys is a high-performance shotgun designed for competitive shooting sports, featuring a tactical design and high-capacity magazine. It is built on the Remington 870 platform and is designed to provide reliable and accurate performance in a variety of shooting conditions.","image_url":"demo/dracarys.jpg","range_rounds":{"total":0,"sessions":[]},"maintenance":{"last_service":"","tasks":{},"log":[]},"accessories":{},"added":"2026-03-25T05:39:28.345Z"},{"id":"mn5m61ndg4ox2ookdxr","type":"PISTOL","condition":"EXCELLENT","make":"Daniel Defense","model":"DDM4 PDW Riptide","caliber":"300 Blackout (300 BLK)","serial_number":"","barrel_length":"7 in","overall_length":"20.75 in","weight":"25.4 oz unloaded","finish":"Matte Black","capacity":"30+1","action":"Semi-Auto","year":"2020","value":"5000","notes":"The Daniel Defense DDM4 PDW Riptide is a compact and lightweight pistol chambered in 300 Blackout, designed for personal defense and tactical applications. It features a 7-inch cold hammer-forged barrel and a pistol-length gas system for reliable performance and reduced recoil.","image_url":"demo/riptide.jpg","range_rounds":{"total":0,"sessions":[]},"maintenance":{"last_service":"","tasks":{},"log":[]},"accessories":{},"added":"2026-03-25T05:39:28.345Z"},{"id":"mn5m61ndmjt13eyhtmr","type":"RIFLE","condition":"EXCELLENT","make":"Daniel Defense","model":"DDM4 V7 SLW PATHFINDER","caliber":"5.56 NATO","serial_number":"","barrel_length":"10.3 in","overall_length":"22 in (with 7 inch keymod rail)","weight":"7.1 lbs unloaded","capacity":"30+1","action":"Semi-Auto","year":"2020","value":"5000","notes":"The DDM4 V7 SLW PathFinder features a Daniel Defense SLW (Switch Link Weapon System) and is designed with versatility in mind. This firearm is ideal for those who require a lightweight, yet reliable and accurate AR-15 carbine.","image_url":"demo/pathfinder.jpg","range_rounds":{"total":0,"sessions":[]},"maintenance":{"last_service":"","tasks":{},"log":[]},"accessories":{},"added":"2026-03-25T05:39:28.345Z"},{"id":"mn5m61ndc802w96pxzl","type":"RIFLE","condition":"EXCELLENT","make":"Daniel Defense","model":"M4 Sandstorm","caliber":"5.56 NATO","serial_number":"","barrel_length":"16 in","overall_length":"32.25-35.75 in","weight":"6.28 lbs unloaded","capacity":"30+1","action":"Semi-Auto","year":"2021","value":"5000","notes":"[AI] The Daniel Defense M4 Sandstorm is a limited-edition carbine featuring a Tornado Grey Cerakote finish and a unique design inspired by the desert storm. It is chambered in 5.56 NATO and has a 16-inch barrel, making it suitable for a variety of shooting applications.","image_url":"demo/sandstorm.jpg","range_rounds":{"total":0,"sessions":[]},"maintenance":{"last_service":"","tasks":{},"log":[]},"accessories":{},"added":"2026-03-25T05:39:28.345Z"},{"id":"mn5m61nd2n81tewan07","type":"RIFLE","condition":"EXCELLENT","make":"Daniel Defense","model":"Icebreaker DD4 V7","caliber":"5.56 NATO","serial_number":"","barrel_length":"16 in","overall_length":"32.75 in","weight":"6 lbs 5.9 oz unloaded","capacity":"30+1","action":"Semi-Auto","year":"2022","value":"5000","notes":"The Daniel Defense Icebreaker DD4 V7 is a limited-edition rifle featuring a unique Ice White Cerakote finish and a 16-inch cold hammer-forged barrel. This rifle is designed for both form and function, with a focus on reliability and accuracy in a durable and eye-catching package.","image_url":"demo/icebreaker.jpg","range_rounds":{"total":0,"sessions":[]},"maintenance":{"last_service":"","tasks":{},"log":[]},"accessories":{},"added":"2026-03-25T05:39:28.345Z"},{"id":"mn5m61ncatirgqgaqpi","type":"RIFLE","condition":"EXCELLENT","make":"GQ Armory","model":"Paladin Black","caliber":".300 Blackout","serial_number":"","barrel_length":"16 in","overall_length":"34 in","weight":"6.5 lbs","capacity":"30+1","action":"Semi-Auto","year":"2020","value":"4000","notes":"The GQ Armory Paladin Black is a high-quality, American-made rifle chambered in .300 Blackout, designed for accuracy and reliability. It features a 16-inch barrel and a durable black finish, making it an excellent choice for hunting, target shooting, or self-defense.","image_url":"demo/paladin.jpg","range_rounds":{"total":0,"sessions":[]},"maintenance":{"last_service":"","tasks":{},"log":[]},"accessories":{},"added":"2026-03-25T05:39:28.344Z"},{"id":"mn5m61ndes3wm0xazl","type":"CARBINE","condition":"EXCELLENT","make":"Daniel Defense","model":"DDM4ISR","caliber":"300 AAC Blackout","serial_number":"","barrel_length":"9 in","overall_length":"20.75 in","weight":"23.5 lbs unloaded, without optic","finish":"Matte Black","capacity":"30+1","action":"Semi-Auto","year":"2016","value":"3950","notes":"The Daniel Defense DDM4ISR is a versatile carbine designed for special operations, law enforcement, and civilian use, chambered in 300 AAC Blackout. It features a 9-inch cold hammer-forged barrel, a free-floating MFR XL rail system, and is compatible with a variety of accessories and optics.","image_url":"demo/ddm4isr.jpg","range_rounds":{"total":0,"sessions":[]},"maintenance":{"last_service":"","tasks":{},"log":[]},"accessories":{},"added":"2026-03-25T05:39:28.345Z"}];
 const _PRELOAD_BY_ID = Object.fromEntries(_PRELOAD_DATA.map(d => [d.id, d]));
 (function() {
+  if (window.ARMORY_BAKE) return;            // a baked offline copy brings its own vault
   const stored = localStorage.getItem('armory_inventory');
   if (!stored || JSON.parse(stored).length === 0) {
     localStorage.setItem('armory_inventory', JSON.stringify(_PRELOAD_DATA));
@@ -3334,7 +3466,7 @@ function detailHeroImage(g) {
 }
 
 function save() {
-  localStorage.setItem('armory_inventory', JSON.stringify(inventory));
+  _persistVault('armory_inventory', inventory);
   updateStats();
   updateCaliberFilter();
 }
@@ -4772,25 +4904,31 @@ const _BAKE = window.ARMORY_BAKE || null;     // set by _bakeSeed() when this pa
 
 // Runs in the <head> of a baked file, before the app's own script, so the vault is in storage before the app reads it.
 // Written as a function so it is syntax-checked with the rest of the app and serialised into the baked file via toString().
-function _bakeSeed(force) {
+function _bakeSeed() {
   try {
     var el = document.getElementById('armory-bake'); if (!el) return;
     var b = JSON.parse(el.textContent), ls = localStorage;
-    window.ARMORY_BAKE = window.ARMORY_BAKE || { baked: b.baked, version: b.version, count: (b.inventory || []).length, sold: (b.sold || []).length, pending: false };
-    if (!force) {
-      if (ls.getItem('armory_bake_id') === b.baked) return;                 // already loaded on this browser
-      var cur = []; try { cur = JSON.parse(ls.getItem('armory_inventory') || '[]'); } catch (e) {}
-      if (cur.length) { window.ARMORY_BAKE.pending = true; return; }        // browser already has a vault: ask first
-    }
-    ls.setItem('armory_inventory', JSON.stringify(b.inventory || []));
-    ls.setItem('armory_sold', JSON.stringify(b.sold || []));
-    if (b.settings && b.settings.text_model) ls.setItem('armory_text_model', b.settings.text_model);
-    if (b.settings && b.settings.view) ls.setItem('armory_view', b.settings.view);
-    if (b.feedback) ls.setItem('armory_feedback', JSON.stringify(b.feedback));
+    window.ARMORY_BAKE = { baked: b.baked, version: b.version, count: (b.inventory || []).length, sold: (b.sold || []).length, pending: false, ingest: false };
     ls.setItem('armory-onboarded', '1');
-    ls.setItem('armory_bake_id', b.baked);
-    window.ARMORY_BAKE.pending = false;
-  } catch (e) { console.warn('ARMORY offline copy could not load its vault', e); }
+    if (ls.getItem('armory_bake_id') === b.baked) return;                   // already loaded on this browser
+    var cur = []; try { cur = JSON.parse(ls.getItem('armory_inventory') || '[]'); } catch (e) {}
+    if (cur.length) window.ARMORY_BAKE.pending = true;                      // browser already has a vault: ask first
+    else window.ARMORY_BAKE.ingest = true;                                  // empty browser: the app loads the baked vault on start
+  } catch (e) { console.warn('ARMORY offline copy could not read its vault', e); }
+}
+
+// Load the vault baked into this file into the app (and from there into storage). Photos go to IndexedDB via save().
+function bakeIngest(rerender) {
+  const b = JSON.parse(document.getElementById('armory-bake').textContent);
+  inventory = (b.inventory || []).map(g => ({ ...g, id: g.id || uid() }));
+  soldInventory = b.sold || [];
+  if (b.settings && b.settings.text_model) localStorage.setItem('armory_text_model', b.settings.text_model);
+  if (b.settings && b.settings.view) localStorage.setItem('armory_view', b.settings.view);
+  if (b.feedback) localStorage.setItem('armory_feedback', JSON.stringify(b.feedback));
+  localStorage.setItem('armory_bake_id', b.baked);
+  _BAKE.ingest = false; _BAKE.pending = false;
+  save(); saveSold();
+  if (rerender) { renderInventory(); renderSold(); updateStats(); updateCaliberFilter(); updateSoldStats(); }
 }
 
 function _promptBakeLoad() {
@@ -4800,7 +4938,7 @@ function _promptBakeLoad() {
     icon: '📴', title: 'Load the baked vault?',
     body: `This offline copy holds ${_BAKE.count} firearm${_BAKE.count === 1 ? '' : 's'}, baked ${_fmtDay(_BAKE.baked)}. This browser already has a vault. Replace it with the baked one, or cancel to keep what is here.`,
     confirmLabel: 'REPLACE', danger: true,
-    onConfirm: () => { _bakeSeed(true); location.reload(); }
+    onConfirm: () => { bakeIngest(true); showToast('Baked vault loaded', 'success'); }
   });
 }
 
@@ -4997,13 +5135,13 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 // ══════════════════════════════════════════
 //  TOAST
 // ══════════════════════════════════════════
-function showToast(msg, type='info') {
+function showToast(msg, type='info', ms=3000) {
   const icons = {success:'✓', error:'⚠', info:'ℹ'};
   const t = document.createElement('div');
   t.className = `toast ${type}`;
   t.innerHTML = `<span>${icons[type]||'•'}</span><span>${msg}</span>`;
   document.getElementById('toastContainer').appendChild(t);
-  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(40px)'; t.style.transition='.3s'; setTimeout(()=>t.remove(),300); }, 3000);
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(40px)'; t.style.transition='.3s'; setTimeout(()=>t.remove(),300); }, ms);
 }
 
 // ══════════════════════════════════════════
@@ -5073,12 +5211,20 @@ function updateStorageInfo() {
   const el = document.getElementById('storageInfo');
   if (!el) return;
   try {
+    // Records (small) live in localStorage, capped at ~5 million characters; photos live in IndexedDB, limited only by free disk space.
     let chars = 0;
     for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); chars += k.length + (localStorage.getItem(k) || '').length; }
-    const mb = chars * 2 / 1048576, pct = Math.min(100, Math.round(mb / 5 * 100));
-    el.innerHTML = `<div class="sm-meter-bar${pct >= 80 ? ' hot' : ''}"><i style="width:${Math.max(2, pct)}%"></i></div>` +
-      `Device storage: <strong style="color:var(--text-primary)">${mb.toFixed(1)} MB</strong> of roughly 5 MB (${pct}%).` +
-      (pct >= 80 ? ' <span style="color:var(--red)">Getting full — save a backup and trim large photos.</span>' : '');
+    const pct = Math.min(100, Math.round(chars / 5e6 * 100));
+    const mb = n => n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + ' MB';
+    const draw = est => {
+      const photos = BlobStore.ok && est && est.usage != null ? `Photos &amp; files: <strong style="color:var(--text-primary)">${mb(est.usage)}</strong>` + (est.quota ? ` · ${mb(Math.max(0, est.quota - est.usage))} free on this device` : '') : (BlobStore.ok ? '' : 'Photos are stored with your records on this browser.');
+      el.innerHTML = `<div class="sm-meter-bar${pct >= 80 ? ' hot' : ''}"><i style="width:${Math.max(2, pct)}%"></i></div>` +
+        `Records: <strong style="color:var(--text-primary)">${pct}%</strong> of the browser's record limit` +
+        (photos ? '<br>' + photos : '') +
+        (pct >= 80 ? ' <br><span style="color:var(--red)">Getting full — export a backup and remove large photos.</span>' : '');
+    };
+    draw(null);
+    if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(draw).catch(() => {});
   } catch (e) { el.textContent = ''; }
 }
 
@@ -5160,6 +5306,7 @@ function toggleKeyVisibility() {
 //  INIT
 // ══════════════════════════════════════════
 function init() {
+  if (typeof _BAKE !== 'undefined' && _BAKE && _BAKE.ingest) bakeIngest(false);
   if (typeof _BAKE !== 'undefined' && _BAKE && _BAKE.pending) setTimeout(_promptBakeLoad, 700);
   // Restore saved view
   setView(currentView);
@@ -5180,7 +5327,7 @@ function init() {
   // vault is empty (see _PRELOAD_DATA) and can be re-added any time from Settings → Manage.
 }
 
-init();
+BlobStore.ready.then(() => hydrateVault()).catch(e => console.error('vault hydrate failed', e)).then(init);
 
 // ══════════════════════════════════════════
 //  LOGO PICKER
@@ -6138,7 +6285,7 @@ function deleteDoc(id, idx) {
 // ══════════════════════════════════════════
 
 function saveSold() {
-  localStorage.setItem('armory_sold', JSON.stringify(soldInventory));
+  _persistVault('armory_sold', soldInventory);
   updateSoldStats();
 }
 
@@ -6772,7 +6919,7 @@ function exportInsurance(id) {
         </div></div>` : '';
 
   const html = `<!DOCTYPE html>
-<!-- ARMORY v3.2.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
+<!-- ARMORY v3.3.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
 <html><head><meta charset="UTF-8">
 <title>Insurance — ${g.make} ${g.model}</title>
 <style>
@@ -6846,7 +6993,7 @@ function exportAllInsurance() {
     </div>`).join('<div class="divider"></div>');
 
   const html = `<!DOCTYPE html>
-<!-- ARMORY v3.2.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
+<!-- ARMORY v3.3.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
 <html><head><meta charset="UTF-8">
 <title>ARMORY — Full Vault Insurance Report</title>
 <style>
