@@ -1,17 +1,32 @@
 {
-  "id": "./",
-  "name": "Market Stretch Terminal",
-  "short_name": "MST",
-  "description": "End-of-day overbought / oversold monitor for the Nasdaq-100, S&P 500 and Dow.",
-  "start_url": "./",
+  "id": "/armory/index.html",
+  "name": "ARMORY Firearms Inventory",
+  "short_name": "ARMORY",
+  "description": "Private, offline-first firearms inventory with AI spec fill, range logs, maintenance records and insurance-ready reports. No accounts, no cloud.",
+  "lang": "en-US",
+  "dir": "ltr",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#06090e",
-  "theme_color": "#06090e",
-  "categories": ["finance", "productivity"],
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#D4AF37",
+  "background_color": "#07080a",
+  "categories": ["utilities", "productivity", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
-  ]
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "./shot-vault.png",    "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Vault — your collection at a glance" },
+    { "src": "./shot-detail.png",   "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Detail — photo and full spec sheet" },
+    { "src": "./shot-docs.png",     "sizes": "1080x1920", "type": "image/png", "form_factor": "narrow", "label": "Docs — bill of sale, 4473 checklist and insurance reports" },
+    { "src": "./shot-desktop.png",  "sizes": "1280x800",  "type": "image/png", "form_factor": "wide",   "label": "Desktop — vault grid with live totals" }
+  ],
+  "shortcuts": [
+    { "name": "Add Firearm", "short_name": "Add",  "description": "Add a new firearm to your vault", "url": "./index.html?action=add",  "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }] },
+    { "name": "Camera Scan", "short_name": "Scan", "description": "Identify a firearm with the AI camera", "url": "./index.html?action=scan", "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }] }
+  ],
+  "launch_handler": { "client_mode": ["navigate-existing", "auto"] }
 }

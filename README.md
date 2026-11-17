@@ -1,71 +1,141 @@
-# Market Stretch Terminal
+<div align="center">
 
-End-of-day overbought / oversold monitor for the Nasdaq-100 (QQQM), S&P 500 (SPY) and Dow (DIA).
-One check after the close, one plain reading per index. No account, no API key. Not live: a GitHub Action rebuilds the data after each US close.
+<img src="docs/banner.svg" alt="ARMORY — Firearms Inventory System" width="100%">
 
-**Live:** https://johnlaz.github.io/mst/ (landing) · https://johnlaz.github.io/mst/app/ (app, installable as a PWA)
+**Private, offline-first firearms inventory. Scan it. Log it. Insure it.**
 
-![Data flow: Yahoo Finance and Wikipedia feed a GitHub Action, which writes data/market.json for the app](docs/data-flow.svg)
+[**Landing page**](https://johnlaz.github.io/armory/) · [**Open the app**](https://johnlaz.github.io/armory/app/) · [Android APK](assets/ARMORY.apk)
 
-## What it does
-- Shows whether each index is stretched down (oversold) or up (overbought), in plain words.
-- Reads the Ultimate Oscillator, RSI, breadth (share of stocks above their 50 and 200-day averages), VIX, distance from the peak and moving averages, new highs/lows and volume.
-- Three sensitivity levels (pullback ~8%, correction ~13%, bear market ~25% drop) instead of detailed criteria.
-- Works offline with the last data it saw, and installs to a phone or desktop home screen.
-- Screening aid only, not investment advice.
-
-## Repo layout
-```
-/
-├── index.html              landing page (no manifest, no service worker)
-├── README.md
-├── docs/
-│   └── data-flow.svg       README visual
-├── app/
-│   ├── index.html          the whole app
-│   ├── manifest.json
-│   ├── sw.js               service worker (version must match the stamp in app/index.html)
-│   ├── icon-192.png
-│   ├── icon-512.png
-│   └── apple-touch-icon.png
-├── data/
-│   └── market.json         built by the Action; do not edit by hand
-├── scripts/
-│   ├── update_data.py
-│   └── requirements.txt
-└── .github/workflows/
-    └── update-data.yml     weekdays 22:30 UTC, after the US close
-```
-`data/` stays at the repo root. The app loads `data/market.json` and falls back to `../data/market.json`, which is where the Action writes it.
-
-## AI / model setup
-None. The app does not use an AI provider.
-
-## Data & privacy
-- Prices come from Yahoo Finance (via `yfinance`) and index constituents from Wikipedia. Both are unofficial sources and can change without notice.
-- Settings and any manual entries are kept in your browser's local storage. Nothing is sent to a server of ours.
-- An optional free FMP key, if you paste one into the app's Menu, is stored in your browser only and is never included in exports.
-
-## Deploy / update
-1. Settings → Pages → Source: Deploy from a branch → `main` / `/ (root)`.
-2. Actions → "Update market data" → **Run workflow** (first run takes a few minutes and commits `data/market.json`).
-3. If the run fails at the commit step: Settings → Actions → General → Workflow permissions → **Read and write permissions**.
-4. To release an app change: edit `app/`, bump `VERSION` in `app/sw.js` **and** the version stamp in `app/index.html`, then push to `main`. Installed copies update on the next open.
-
-Optional: repo secret `FMP_API_KEY`, used only as a last-resort backup source for the three index ETFs if Yahoo and Stooq both fail.
-
-Base cases: the thresholds live in `PRESETS` near the top of the script in `app/index.html`. The "what followed past signals" table uses `PRESET_RULES` in `scripts/update_data.py`; keep the two in step.
-
-## If something looks wrong
-- Header says data is N days old: the Action failed or Yahoo blocked it that day. Check the Actions log and re-run.
-- Site not updating after a successful run: confirm Pages is deploying from the branch the Action commits to.
-- App looks stale after a release: reload once; the new service worker takes over on the next load.
-- If Wikipedia's tables change, the script reuses the previous constituent list.
-- Nasdaq-100 top-10 weight is approximate (market-cap share). S&P 500 weights are not computed.
-- Without `data/market.json` the app falls back to manual entry (Update data menu).
-
-## Changelog
-- **1.0.0**: landing page at the repo root, app moved to `/app`, installable PWA (manifest, service worker, icons), version stamp, new README.
+</div>
 
 ---
-© 2026 LAZLAB Creations. All Rights Reserved. · lazlab.io@gmail.com
+
+## What it is
+
+ARMORY is a Progressive Web App for cataloging a firearms collection. It installs on Android, iOS, Windows and macOS straight from the browser, runs offline, and keeps your data on your device. There are no accounts and no ARMORY servers.
+
+<p align="center">
+  <img src="app/shot-vault.png"  alt="Vault — your collection at a glance" width="31%">
+  <img src="app/shot-detail.png" alt="Detail — photo and full spec sheet" width="31%">
+  <img src="app/shot-docs.png"   alt="Docs — bill of sale, 4473 checklist and insurance reports" width="31%">
+</p>
+<p align="center"><sub><b>Vault</b> · <b>Detail</b> · <b>Docs</b> — phone screens show the built-in demo vault.</sub></p>
+
+<p align="center">
+  <img src="docs/vault-full.png" alt="A full vault: 35 firearms in grid view with live totals, filters and sorting" width="72%">
+</p>
+<p align="center"><sub><b>A full vault</b> — 35 firearms, live totals, filters and sorting. Serial numbers are hidden in this screenshot.</sub></p>
+
+**Features**
+
+- **Vault** — grid, tile and list views; search, filter by type / caliber / location, and ten sort orders; live firearm count, vault value and rounds fired.
+- **Scan** — point the camera at a firearm and vision AI proposes make, model and caliber. *AI fill* completes the spec sheet from make and model.
+- **Records** — full spec sheet, hero photo plus gallery, range log, maintenance checklist and log, accessories, storage location, notes.
+- **Docs** — insurance reports (single firearm or whole vault), blank or pre-filled Bill of Sale, and an ATF 4473 reference checklist. Reports open as print-ready pages; save them as PDF from the print dialog.
+- **Sold archive** — retire a firearm from the vault and keep its record.
+- **Import / export** — spreadsheet import (XLSX / CSV), Excel / CSV export, and a full JSON backup with merge or replace restore, and an **offline copy** (see changelog 3.2.0).
+- **Demo vault** — seven sample firearms with photos load into an empty vault, and can be re-added any time from *Settings → Vault tools*.
+
+## Live URLs
+
+| | |
+|---|---|
+| Landing page | <https://johnlaz.github.io/armory/> |
+| App | <https://johnlaz.github.io/armory/app/> |
+| Android APK | <https://johnlaz.github.io/armory/assets/ARMORY.apk> |
+
+## Repo layout
+
+```
+/index.html            landing page (installed-app launches redirect to /app/)
+/README.md
+/sw.js                 transitional worker — retires the pre-/app registration, then removes itself
+/docs/                 README visuals only (banner.svg, how-it-works.svg, vault-full.png)
+/assets/ARMORY.apk     Android wrapper (Trusted Web Activity)
+/app/index.html        the whole app — one file
+/app/manifest.json
+/app/sw.js
+/app/icon-192.png      192 + 512, maskable-safe
+/app/icon-512.png
+/app/icon-tile.png     cropped logo used by the landing page
+/app/shot-*.png        manifest screenshots (phone ×3, desktop ×1)
+/app/demo/*.jpg        demo-vault photos
+/app/vendor/           xlsx.full.min.js (SheetJS 0.18.5, bundled so import/export work offline)
+```
+
+> `/sw.js` only exists so installs made before the move to `/app/` upgrade cleanly. It can be deleted after a few months.
+
+## AI and model setup
+
+AI features are optional and use **your own free [Groq](https://console.groq.com/keys) API key**.
+
+1. Open **Settings → AI assistant** and paste a key (starts with `gsk_`) — it saves automatically.
+2. The model list is pulled live from Groq when you save the key and whenever you tap 🔄.
+
+How the model picker behaves:
+
+- It **merges** — models Groq currently serves are added to the three built-in choices; nothing is removed.
+- Your saved model is **never swapped automatically**. If Groq stops listing it, it stays selected and is flagged with ⚠.
+- Non-chat models (speech, TTS, guard and safeguard classifiers, embeddings) are filtered out.
+- If a call hits a rate limit or a retired model, the app tries the other available models for that request without changing your saved choice.
+
+Default text model: `openai/gpt-oss-120b`. Camera identification picks a vision-capable model from the live list.
+
+## Data and privacy
+
+<img src="docs/how-it-works.svg" alt="How ARMORY handles your data" width="100%">
+
+- Inventory, photos, logs, notes and settings are stored in your browser's **localStorage** on your device. There is no sync and no account.
+- When you use a **scan** or **AI fill**, the photo or the make/model you entered is sent to **Groq**, using your key, and the answer comes back. Nothing is sent unless you use an AI feature.
+- Your API key is stored locally, sent only to Groq, and **never included in backups**. Re-enter it after restoring on a new device.
+- localStorage holds roughly 5 MB. The bar on the *Settings* home screen shows how much you have used; photos are the main cost.
+- Clearing site data or uninstalling the app erases your vault. **Export a backup regularly.**
+- All GitHub Pages apps on `johnlaz.github.io` share one browser origin, so a stored key is visible to other apps on that origin. Keys are namespaced (`armory_*`) so they do not collide.
+
+## Deploy and update
+
+Hosted on GitHub Pages from the repository root (`main`, `/ (root)`). There is no build step.
+
+To ship a change:
+
+1. Edit `/app/index.html`.
+2. Bump `APP_VERSION` near the top of its main script. That one constant updates the on-screen version, the backup format version and the service-worker cache name (the app registers `sw.js?v=<version>`).
+3. If you add or remove files the app needs offline, update the `SHELL` list in `/app/sw.js`. Every listed file must exist — install fails if one is missing.
+4. Commit and push. Open installs fetch the new HTML first (network-first) and show an **ARMORY was updated — Reload** banner.
+
+**Installs and the APK.** The manifest `id` is pinned to `/armory/index.html` so installs made before the `/app/` move keep their identity. Old installs launch the landing page, which sends standalone launches to `/app/`. The APK opens the app inside the same scope (`/armory/`), so it should keep working; if it does not, rebuild it with start URL `https://johnlaz.github.io/armory/app/index.html`.
+
+## Changelog
+
+### 3.2.0
+- **Offline copy ("bake"):** *Settings → Backup & offline copy → Bake offline copy* writes one self-contained `.html` — the app, the Excel library, the demo photos and your whole vault (firearms, photos, range logs, maintenance, sold records, notes) all inlined. Open it in any browser with no internet and no install; on first open it loads the baked vault into that browser's storage. Opening a newer offline copy on a browser that already has a vault asks before replacing it. Restore also accepts an offline copy (`.json` or `.html`).
+- **Settings redesign:** the four tabs and collapsible sections are replaced by a simple list — AI assistant · Backup & offline copy · Spreadsheets · Vault tools · About & help — each opening its own page with a back button. Hardware Back climbs one level first. The key and model save automatically (no Save button); the list shows live status such as the saved key and last backup date.
+- **Backups now include sold records** (they were missing from the JSON backup); restore handles them in merge and replace.
+- **Fix:** the About text claimed backups included the API key; they never do.
+
+### 3.1.0
+- **Navigation:** new bottom bar — Vault · Sold · Scan · Docs · Settings. Docs is now a screen; the header keeps only the theme toggle and **+ ADD**.
+- **Back button:** Back never exits by accident. It closes the top-most layer first (prompt → photo viewer → guide → dialog → select mode → search), then returns any sub-screen to the Vault. At the Vault a second Back within 2.5 s is required to leave. Backing out of an edited firearm form asks *Discard changes?* first. Esc does the same on desktop.
+- **Themes:** fixed unreadable text in both themes — hint and label text now meets WCAG AA (4.5:1) on every screen, dialog, toast and banner; gold text uses a darker bronze in light mode; dropdowns and their option lists follow the app theme on every platform; the status bar colour follows the theme.
+- **Dialogs and notifications:** prompts, dialogs and photo viewers now cover the header and bottom nav (they used to sit underneath them); toasts always float above everything.
+- **Fix:** closing the camera no longer throws a stack-overflow error (present since 3.0).
+- **Settings:** four tabs (AI, Data, Manage, About) with collapsible sections; storage meter; API status moved into the AI tab.
+- **Demo vault:** photos are bundled locally (no hot-linking); *Restore Demo Vault* added; old hot-linked demo photos migrate automatically.
+- **Fix:** removed a hidden loader that replaced the whole inventory with sample data when it held three or fewer firearms without photos.
+- **Privacy:** backups no longer include the API key.
+- **Models:** refresh merges with the existing list; saved model kept and flagged, never auto-swapped.
+- **Offline:** service worker precaches the app shell; SheetJS bundled locally; update banner; cache name follows `APP_VERSION`.
+- **Manifest:** explicit `id`, maskable-safe 192 / 512 icons, working *Add* and *Scan* shortcuts, real screenshots.
+- **Exports:** photos resolve correctly inside print windows.
+- **Repo:** landing page and app merged into one repo (landing at root, app in `/app`); landing rebuilt with real screenshots and corrected privacy copy.
+
+### 3.0
+- Initial public release.
+
+---
+
+<div align="center">
+
+© 2026 LAZLAB Creations. All Rights Reserved. · [lazlab.io@gmail.com](mailto:lazlab.io@gmail.com)
+
+</div>

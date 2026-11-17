@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-labelledby="t d">
+  <title id="t">ARMORY — Firearms Inventory</title>
+  <desc id="d">ARMORY, a private offline-first firearms inventory app. No accounts, no cloud.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0c0f"/><stop offset="1" stop-color="#15171c"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#C79A2A"/><stop offset=".5" stop-color="#E8C964"/><stop offset="1" stop-color="#C79A2A"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#D4AF37" stop-opacity=".22"/><stop offset="1" stop-color="#D4AF37" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="300" rx="18" fill="url(#bg)"/>
+  <rect x="1" y="1" width="1198" height="298" rx="17" fill="none" stroke="#D4AF37" stroke-opacity=".35"/>
+  <circle cx="1010" cy="150" r="190" fill="url(#glow)"/>
+  <!-- hex mark -->
+  <g transform="translate(150 150)" fill="none" stroke="url(#gold)" stroke-width="7" stroke-linejoin="round">
+    <polygon points="0,-78 68,-39 68,39 0,78 -68,39 -68,-39"/>
+    <polygon points="0,-46 40,-23 40,23 0,46 -40,23 -40,-23" stroke-width="4" stroke-opacity=".7"/>
+    <circle cx="0" cy="-6" r="11" fill="#D4AF37" stroke="none"/>
+    <path d="M-5 2 L5 2 L9 28 L-9 28 Z" fill="#D4AF37" stroke="none"/>
+  </g>
+  <text x="270" y="152" font-family="'Bebas Neue','Impact','Arial Narrow',Arial,sans-serif" font-size="104" letter-spacing="12" fill="url(#gold)">ARMORY</text>
+  <text x="274" y="196" font-family="'Share Tech Mono','Consolas','Courier New',monospace" font-size="21" letter-spacing="6" fill="#aab0ba">FIREARMS INVENTORY SYSTEM</text>
+  <text x="274" y="244" font-family="'Barlow Condensed','Arial Narrow',Arial,sans-serif" font-size="24" letter-spacing="1.5" fill="#d9d5ca">Scan it. Log it. Insure it.  ·  Offline-first  ·  No accounts  ·  No cloud</text>
+</svg>

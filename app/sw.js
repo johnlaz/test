@@ -1,52 +1,61 @@
-/* Market Stretch Terminal service worker.
-   Bump VERSION with every release; it must match the version stamp in index.html. */
-const VERSION = '1.0.0';
-const CACHE = 'mst-' + VERSION;
-const SHELL = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+// ARMORY service worker.
+// The cache name follows the app version: index.html registers "sw.js?v=<APP_VERSION>",
+// so bumping APP_VERSION in the app is the only thing needed to roll a new cache.
+const VERSION = new URL(self.location.href).searchParams.get('v') || 'dev';
+const CACHE = 'armory-v' + VERSION;
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+// Every file listed here must exist — install fails (and the old worker stays) if one is missing.
+const SHELL = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './vendor/xlsx.full.min.js',
+  './demo/riptide.jpg',
+  './demo/pathfinder.jpg',
+  './demo/sandstorm.jpg',
+  './demo/icebreaker.jpg',
+  './demo/dracarys.jpg',
+  './demo/paladin.jpg',
+  './demo/ddm4isr.jpg'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
+self.addEventListener('activate', event => {
+  event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k.startsWith('mst-') && k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('armory-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
-function networkFirst(req, fallbackKey) {
-  return fetch(req)
-    .then(res => {
-      if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(fallbackKey || req, copy)); }
-      return res;
-    })
-    .catch(() => caches.match(fallbackKey || req).then(hit => hit || Response.error()));
-}
-
-self.addEventListener('fetch', e => {
-  const req = e.request;
+self.addEventListener('fetch', event => {
+  const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return;            // never touch third-party APIs (FMP etc.)
+  if (url.origin !== self.location.origin) return;           // Groq API, anything cross-origin: straight to network
 
-  if (url.pathname.endsWith('/market.json')) {           // data: always try fresh first
-    e.respondWith(networkFirst(new Request(req.url, { cache: 'no-store' }), url.origin + url.pathname));
-    return;
-  }
-  if (req.mode === 'navigate' || req.destination === 'document') {   // HTML: network-first, offline fallback
-    e.respondWith(
-      fetch(req).then(res => {
-        if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put('index.html', copy)); }
-        return res;
-      }).catch(() => caches.match('index.html').then(hit => hit || caches.match('./')))
+  // Pages: network first so a new release always wins; cached shell when offline.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          if (res && res.status === 200) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+          return res;
+        })
+        .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))
     );
     return;
   }
-  e.respondWith(                                          // assets: cache-first
+
+  // Assets: cache first, fill the cache on first use.
+  event.respondWith(
     caches.match(req).then(hit => hit || fetch(req).then(res => {
-      if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      if (res && res.status === 200 && res.type === 'basic') { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }))
   );
