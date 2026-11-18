@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ARMORY v3.3.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
+<!-- ARMORY v3.3.1 · © 2026 LAZLAB Creations. All Rights Reserved. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,7 +22,7 @@
 
 <style>
 /* ═══════════════════════════════════════════════════════════
-   ARMORY v3.3.0 — iOS Dark Mode Design System
+   ARMORY v3.3.1 — iOS Dark Mode Design System
    Lazzaro Standard · Premium Firearms Vault
    ═══════════════════════════════════════════════════════════ */
 
@@ -2217,7 +2217,7 @@ select.filter-select:focus { border-color: var(--accent); }
   <div class="as-logo" style="font-size:72px;color:var(--accent-fg);">⬡</div>
   <div class="as-name">ARMORY</div>
   <div class="as-tag">FIREARMS INVENTORY SYSTEM</div>
-  <div class="as-ver" data-app-version>v3.3.0</div>
+  <div class="as-ver" data-app-version>v3.3.1</div>
   <button class="as-enter" onclick="splashEnter()">Enter →</button>
 </div>
 
@@ -2687,7 +2687,7 @@ select.filter-select:focus { border-color: var(--accent); }
           </button>
           <button class="sm-row" onclick="settingsGo('about')">
             <span class="sm-ico">ℹ️</span>
-            <span class="sm-txt"><strong>About &amp; help</strong><small><span data-app-version>v3.3.0</span> · guide, notes, our story</small></span>
+            <span class="sm-txt"><strong>About &amp; help</strong><small><span data-app-version>v3.3.1</span> · guide, notes, our story</small></span>
             <span class="sm-chev">›</span>
           </button>
         </div>
@@ -2811,7 +2811,7 @@ select.filter-select:focus { border-color: var(--accent); }
 
         <div style="text-align:center;padding:4px 0 18px">
           <div style="font-family:var(--heading);font-size:38px;letter-spacing:6px;color:var(--accent-fg);text-shadow:0 0 24px rgba(200,168,75,0.35)">⬡ ARMORY</div>
-          <div style="font-family:var(--font);font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-top:4px">FIREARMS INVENTORY SYSTEM · <span data-app-version>v3.3.0</span></div>
+          <div style="font-family:var(--font);font-size:11px;letter-spacing:3px;color:var(--text-dim);margin-top:4px">FIREARMS INVENTORY SYSTEM · <span data-app-version>v3.3.1</span></div>
         </div>
 
         <div class="sm-group">
@@ -2842,7 +2842,7 @@ select.filter-select:focus { border-color: var(--accent); }
         </div>
 
         <div style="font-family:var(--font);font-size:10px;color:var(--text-dim);text-align:center;padding:8px 0;line-height:1.7">
-          <span data-app-version>v3.3.0</span> · © 2026 LAZLAB Creations. All Rights Reserved.<br>
+          <span data-app-version>v3.3.1</span> · © 2026 LAZLAB Creations. All Rights Reserved.<br>
           <a href="mailto:lazlab.io@gmail.com" style="color:inherit">lazlab.io@gmail.com</a> · All data stays on your device
         </div>
       </div>
@@ -2902,7 +2902,7 @@ select.filter-select:focus { border-color: var(--accent); }
 // ══════════════════════════════════════════
 //  APP VERSION — single source of truth (also drives the service-worker cache name)
 // ══════════════════════════════════════════
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.3.1';
 function stampVersion() {
   document.querySelectorAll('[data-app-version]').forEach(el => { el.textContent = 'v' + APP_VERSION; });
 }
@@ -5211,17 +5211,29 @@ function updateStorageInfo() {
   const el = document.getElementById('storageInfo');
   if (!el) return;
   try {
-    // Records (small) live in localStorage, capped at ~5 million characters; photos live in IndexedDB, limited only by free disk space.
-    let chars = 0;
-    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); chars += k.length + (localStorage.getItem(k) || '').length; }
-    const pct = Math.min(100, Math.round(chars / 5e6 * 100));
+    // localStorage is shared by EVERY app served from this site (all of johnlaz.github.io), and capped at ~5 million characters in total.
+    // Records live there; photos live in IndexedDB (limited by free disk space). Show ARMORY's own share separately from other apps'.
+    let mine = 0, others = 0; const bigOthers = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i), n = k.length + (localStorage.getItem(k) || '').length;
+      if (/^armory/i.test(k)) mine += n; else { others += n; bigOthers.push([k, n]); }
+    }
+    bigOthers.sort((a, b) => b[1] - a[1]);
+    const LIMIT = 5e6, total = mine + others, pct = Math.min(100, Math.round(total / LIMIT * 100));
+    const myPct = (mine / LIMIT * 100), othPct = Math.min(100 - myPct, others / LIMIT * 100);
     const mb = n => n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + ' MB';
+    const strong = t => `<strong style="color:var(--text-primary)">${t}</strong>`;
     const draw = est => {
-      const photos = BlobStore.ok && est && est.usage != null ? `Photos &amp; files: <strong style="color:var(--text-primary)">${mb(est.usage)}</strong>` + (est.quota ? ` · ${mb(Math.max(0, est.quota - est.usage))} free on this device` : '') : (BlobStore.ok ? '' : 'Photos are stored with your records on this browser.');
-      el.innerHTML = `<div class="sm-meter-bar${pct >= 80 ? ' hot' : ''}"><i style="width:${Math.max(2, pct)}%"></i></div>` +
-        `Records: <strong style="color:var(--text-primary)">${pct}%</strong> of the browser's record limit` +
+      const photos = BlobStore.ok && est && est.usage != null ? `Photos &amp; files: ${strong(mb(est.usage))}` + (est.quota ? ` · ${mb(Math.max(0, est.quota - est.usage))} free on this device` : '') : (BlobStore.ok ? '' : 'Photos are stored with your records on this browser.');
+      const big = bigOthers.slice(0, 3).filter(x => x[1] > 50000).map(x => `${x[0].replace(/</g, '&lt;')} (${Math.round(x[1] / 1000)}K)`).join(', ');
+      el.innerHTML =
+        `<div class="sm-meter-bar${pct >= 80 ? ' hot' : ''}" title="Browser record limit for this whole site"><i style="width:${Math.max(1, myPct)}%"></i><i style="width:${othPct}%;background:var(--text-tertiary);margin-top:-4px;margin-left:${myPct}%"></i></div>` +
+        `Record storage for this site: ${strong(pct + '%')} used (~5M character limit)<br>` +
+        `ARMORY: ${strong(Math.round(mine / 1000) + 'K')} characters` +
+        (others > 0 ? ` · other apps on this site: ${strong(Math.round(others / 1000) + 'K')}` : '') +
+        (big && others > 500000 ? `<br><span style="color:var(--text-tertiary)">Largest others: ${big}</span>` : '') +
         (photos ? '<br>' + photos : '') +
-        (pct >= 80 ? ' <br><span style="color:var(--red)">Getting full — export a backup and remove large photos.</span>' : '');
+        (pct >= 80 ? ' <br><span style="color:var(--red)">Getting full — free up space in your other apps or export a backup.</span>' : '');
     };
     draw(null);
     if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(draw).catch(() => {});
@@ -6919,7 +6931,7 @@ function exportInsurance(id) {
         </div></div>` : '';
 
   const html = `<!DOCTYPE html>
-<!-- ARMORY v3.3.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
+<!-- ARMORY v3.3.1 · © 2026 LAZLAB Creations. All Rights Reserved. -->
 <html><head><meta charset="UTF-8">
 <title>Insurance — ${g.make} ${g.model}</title>
 <style>
@@ -6993,7 +7005,7 @@ function exportAllInsurance() {
     </div>`).join('<div class="divider"></div>');
 
   const html = `<!DOCTYPE html>
-<!-- ARMORY v3.3.0 · © 2026 LAZLAB Creations. All Rights Reserved. -->
+<!-- ARMORY v3.3.1 · © 2026 LAZLAB Creations. All Rights Reserved. -->
 <html><head><meta charset="UTF-8">
 <title>ARMORY — Full Vault Insurance Report</title>
 <style>

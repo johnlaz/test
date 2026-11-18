@@ -107,6 +107,9 @@ To ship a change:
 
 ## Changelog
 
+### 3.3.1
+- Storage meter now separates ARMORY's own record storage from other apps on the same site (every app on johnlaz.github.io shares one ~5M-character localStorage budget) and names the largest other keys.
+
 ### 3.3.0
 - **Photos moved to IndexedDB.** Browsers cap `localStorage` at about 5 million characters per site, and photos stored as text filled it with a few dozen firearms. Records, settings and notes stay in `localStorage`; every large photo, gallery image and attached document now lives in IndexedDB, limited by free disk space instead. A 60-firearm vault with 24 million characters of photos saved and reloaded identically in testing, where the old limit was about 5 million.
 - **Automatic, one-time migration:** the first launch of 3.3.0 moves existing inline photos into IndexedDB. Photos are written first and the record list is switched over only after they are safely stored, so an interrupted migration leaves the old data intact. Unused photos are cleaned up on launch.
